@@ -1,0 +1,10 @@
+# hacky:start
+[mcp_servers.hacky]
+command = "cmd"
+args = ["/c", "npx", "-y", "hacky-mcp-server@0.1.2"]
+
+[mcp_servers.hacky.env]
+HACKY_SUPABASE_URL = "https://wxzhxmtnlzyckgepmegc.supabase.co"
+HACKY_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_sF23Ip5sUcJMdXEe96ieIQ_6N9_JFct"
+HACKY_TEAM_ID = "9435f364-e2a6-401a-898a-62564367a9a7"
+# hacky:end
