@@ -12,8 +12,9 @@ namespace Amusnet.World
         public Transform leftWing, rightWing;
         CharacterController mover;
         ShelterState shelter;
+        Amusnet.Mess.MessManager mess;
         Vector3 drift;
-        void Awake() { mover = GetComponent<CharacterController>(); shelter = GetComponent<ShelterState>(); }
+        void Awake() { mover = GetComponent<CharacterController>(); shelter = GetComponent<ShelterState>(); mess = GetComponent<Amusnet.Mess.MessManager>(); }
         void Update()
         {
             var k = Keyboard.current;
@@ -40,6 +41,7 @@ namespace Amusnet.World
         }
         void OnGUI()
         {
+            if (mess) GUI.Box(new Rect(12,90,390,26), $"Mess: {mess.Score}     Last milestone: {mess.LastThreshold}     Brush hay bales to score");
             GUI.Box(new Rect(12,12,390,74),"Sprint 2   •   Village flight");
             GUI.Label(new Rect(24,37,375,20),"WASD move     Space climb     Left Shift descend");
             GUI.Label(new Rect(24,58,375,20),$"{(shelter.IsHidden ? "Hidden" : "Exposed")}    {(weather.Daylight < .3f ? "Night" : "Day")}    Rain {weather.Rain:P0}    Wind {drift.magnitude:F1} m/s");
