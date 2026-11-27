@@ -1,1 +1,1 @@
-# Amunet-Hackathon
+# Amusnet-Hackathon
