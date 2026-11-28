@@ -1,22 +1,39 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:b="ButterflyUI">
     <ui:Style src="Common.uss" />
     <ui:Style src="MainMenu.uss" />
-    <ui:VisualElement name="menuScreen" class="screen menu-screen hidden">
-        <ui:VisualElement class="reveal">
-            <b:ButterflyLogo name="logo" class="menu-logo float-loop"
-                upper-wing-color="#FF8A3D" lower-wing-color="#A78BFA" spot-color="#FFF4E0" body-color="#120F24" />
-        </ui:VisualElement>
-        <ui:Label text="Butterfly Rebellion" class="title menu-title reveal delay-1" />
-        <ui:Label text="ONE FLAP AT A TIME" class="subtitle reveal delay-2" />
-        <ui:VisualElement class="menu-buttons">
-            <ui:VisualElement class="reveal delay-3">
-                <ui:Button name="playButton" text="Play" class="btn btn--primary" />
+    <ui:VisualElement name="menuScreen" class="screen side-screen hidden">
+        <b:MenuScrim class="side-scrim menu-scrim" picking-mode="Ignore" />
+        <ui:VisualElement class="side-column" picking-mode="Ignore">
+            <ui:VisualElement class="menu-logo-exit reveal" picking-mode="Ignore">
+                <ui:VisualElement name="logo" class="menu-logo bob-loop" picking-mode="Ignore">
+                    <b:ButterflyLogo class="menu-mark" picking-mode="Ignore"
+                        upper-wing-color="#F4EFE1" lower-wing-color="#E6DFCC" spot-color="#27252B" body-color="#27252B" />
+                    <ui:Label text="Butterfly" class="display-title" />
+                    <ui:Label text="Rebellion" class="display-title" />
+                    <ui:Label text="ONE FLAP AT A TIME" class="kicker menu-tag" />
+                </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement class="reveal delay-4">
-                <ui:Button name="settingsButton" text="Settings" class="btn" />
-            </ui:VisualElement>
-            <ui:VisualElement class="reveal delay-5">
-                <ui:Button name="quitButton" text="Quit" class="btn" />
+            <ui:VisualElement class="side-buttons" picking-mode="Ignore">
+                <ui:VisualElement class="reveal delay-3" picking-mode="Ignore">
+                    <ui:VisualElement class="pbtn-wrap pbtn-wrap--primary menu-exit-1">
+                        <ui:VisualElement class="pbtn-glow--outer" picking-mode="Ignore" />
+                        <ui:VisualElement class="pbtn-glow--inner" picking-mode="Ignore" />
+                        <ui:Button name="playButton" text="PLAY" class="pbtn pbtn--primary" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="reveal delay-4" picking-mode="Ignore">
+                    <ui:VisualElement class="pbtn-wrap pbtn-wrap--secondary menu-exit-2">
+                        <ui:VisualElement class="pbtn-glow--outer" picking-mode="Ignore" />
+                        <ui:VisualElement class="pbtn-glow--inner" picking-mode="Ignore" />
+                        <ui:Button name="settingsButton" text="SETTINGS" class="pbtn pbtn--secondary" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="reveal delay-5" picking-mode="Ignore">
+                    <ui:VisualElement class="pbtn-wrap pbtn-wrap--ghost menu-exit-3">
+                        <ui:VisualElement class="pbtn-glow--inner" picking-mode="Ignore" />
+                        <ui:Button name="quitButton" text="QUIT" class="pbtn pbtn--ghost" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

@@ -48,6 +48,7 @@ public class MenuCamera : MonoBehaviour
 
     void LateUpdate()
     {
+        if (flying) return; // hold the orbit's last pose so the blend down to the player starts clean
         angle += orbitDegreesPerSecond * Time.unscaledDeltaTime;
         var offset = Quaternion.Euler(0f, angle, 0f) * new Vector3(0f, orbitHeight, -orbitRadius);
         transform.position = orbitCenter + offset;
