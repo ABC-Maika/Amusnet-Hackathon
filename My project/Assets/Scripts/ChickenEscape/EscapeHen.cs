@@ -22,6 +22,7 @@ namespace Amusnet.ChickenEscape
         public bool Caught { get; private set; }
         public bool Following { get; private set; }
         public bool InHands { get; private set; }
+        public Vector3 Velocity => motion;
 
         void Awake()
         {

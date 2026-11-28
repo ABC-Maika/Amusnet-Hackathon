@@ -10,7 +10,7 @@ namespace Amusnet.ChickenEscape
         public enum Phase { MeetDog, Trust, Farm, Won, Lost }
         public enum Finish { Left, Lockdown, FlockAccountedFor, TooManyCaught, DogSecured }
 
-        public const int FlockLimit = 3;
+        public const int FlockLimit = 2;
         public const int RescueTarget = 3;
         const float GustCooldown = 8.5f;
         const float CallRange = 6.25f;
@@ -31,8 +31,6 @@ namespace Amusnet.ChickenEscape
         static bool skipBondOnRetry;
         bool dragging, laundryMoved, hensInPen = true, loading, dogWasCaught;
         float trustedAt, gustAt, dogGrabbedAt, capturedAt = float.NegativeInfinity;
-        Vector3 decoy;
-        float decoyUntil;
 
         public Phase Current { get; private set; }
         public Finish FinishedBy { get; private set; }
@@ -67,8 +65,8 @@ namespace Amusnet.ChickenEscape
         public bool JustCaught => Time.time - capturedAt < 1.7f;
         public bool CanLeave => !IsButterfly && Saved > 0 && TryExit(dog.transform.position, out _);
         public EscapeKeeper Keeper => keeper;
-        public bool DecoyActive => Time.time < decoyUntil && keeper.IsDistracted;
-        public Vector3 DecoyMarker => decoy + Vector3.up * .7f;
+        public bool DecoyActive => keeper.IsDistracted;
+        public Vector3 DecoyMarker => keeper.DecoyPosition + Vector3.up * .7f;
         public Vector3 OrchardMarker => orchardExit.bounds.center + Vector3.up * 1.25f;
         public Vector3 LaneMarker => laneExit.bounds.center + Vector3.up * 1.25f;
 
@@ -203,7 +201,7 @@ namespace Amusnet.ChickenEscape
                 }
             }
 
-            var taken = keeper.Step(dog, gate, flock, Current == Phase.Farm, hensInPen, passageBlocked);
+            var taken = keeper.Step(dog, gate, flock, Current == Phase.Farm, hensInPen, passageBlocked, !PastExit(lead));
             if (keeper.HasSpottedSomeone) RaiseAlarm();
             if (DogCaptured && !dogWasCaught)
             {
@@ -261,8 +259,6 @@ namespace Amusnet.ChickenEscape
                 point.y = .04f;
                 if (!keeper.TryDistract(point)) return;
                 butterfly.GustAt(point);
-                decoy = point;
-                decoyUntil = Time.time + 5.3f;
                 gustAt = Time.time + GustCooldown;
                 audioSource.PlayOneShot(switchSound, .83f);
             }
@@ -308,6 +304,14 @@ namespace Amusnet.ChickenEscape
             Vector3 point = position + Vector3.up * .12f;
             orchard = orchardExit.bounds.Contains(point);
             return orchard || laneExit.bounds.Contains(point);
+        }
+
+        bool PastExit(Vector3 position)
+        {
+            Bounds orchard = orchardExit.bounds;
+            Bounds lane = laneExit.bounds;
+            return (position.x <= orchard.max.x && position.z >= orchard.min.z && position.z <= orchard.max.z) ||
+                   (position.z <= lane.max.z && position.x >= lane.min.x && position.x <= lane.max.x);
         }
 
         void SetDragging(bool state)
