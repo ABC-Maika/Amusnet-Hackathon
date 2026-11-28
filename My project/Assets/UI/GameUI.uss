@@ -1,0 +1,202 @@
+.game-root {
+    flex-grow: 1;
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
+
+.hud--dimmed {
+    opacity: 0.25;
+}
+
+.hud--off {
+    opacity: 0;
+}
+
+.hud-caption {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    font-size: 16px;
+    letter-spacing: 4px;
+    color: var(--c-muted);
+}
+
+/* The "Esc to pause" hint only makes sense during play. */
+.hud--dimmed > .hud-hint {
+    display: none;
+}
+
+.hud-hint {
+    position: absolute;
+    left: 32px;
+    bottom: 24px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 4px rgba(12, 9, 26, 0.6);
+}
+
+.mess {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    width: 720px;
+    translate: -50% 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 22px;
+    background-color: var(--c-panel);
+    border-width: 2px;
+    border-color: var(--c-panel-edge);
+    border-radius: 30px;
+}
+
+.mess-track {
+    flex-grow: 1;
+    height: 18px;
+    margin: 0 16px;
+    background-color: var(--c-track);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.mess-fill {
+    width: 0;
+    height: 100%;
+    background-color: var(--c-petal);
+    border-radius: 9px;
+    overflow: hidden;
+    transition-property: width, background-color;
+    transition-duration: 0.45s, 0.3s;
+    transition-timing-function: ease-out-cubic, linear;
+}
+
+.mess-fill--bump {
+    background-color: var(--c-petal-hi);
+}
+
+.mess-shine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    background-color: rgba(255, 255, 255, 0.5);
+    rotate: 20deg;
+    translate: -80px 0;
+    transition-property: translate;
+    transition-duration: 2.4s;
+    transition-timing-function: ease-in-out-sine;
+}
+
+.mess-shine--b {
+    translate: 760px 0;
+}
+
+.mess-value {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    width: 72px;
+    -unity-text-align: middle-right;
+    color: var(--c-accent-hi);
+    transition-property: scale;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-back;
+}
+
+.mess-value--bump {
+    scale: 1.35 1.35;
+}
+
+.predator {
+    position: absolute;
+    top: 20px;
+    right: 32px;
+    align-items: center;
+}
+
+.predator > .hud-caption {
+    color: var(--c-text);
+    text-shadow: 0 1px 4px rgba(12, 9, 26, 0.7);
+}
+
+.predator-meter {
+    width: 110px;
+    height: 110px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    transition-property: scale;
+    transition-duration: 0.45s;
+    transition-timing-function: ease-in-out-sine;
+}
+
+.predator-meter--danger.predator-meter--b {
+    scale: 1.12 1.12;
+}
+
+.predator-value {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    font-size: 26px;
+    color: var(--c-text);
+    transition-property: color;
+    transition-duration: 0.3s;
+}
+
+.predator-meter--danger > .predator-value {
+    color: var(--c-danger);
+}
+
+/* The menu template's container is only a holder; its screen fills the view. */
+.menu {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+/* ---------- End screens ---------- */
+
+.end-kicker {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    font-size: 22px;
+    letter-spacing: 10px;
+    color: var(--c-gold);
+    text-shadow: 0 2px 6px rgba(12, 9, 26, 0.6);
+}
+
+.end-title {
+    font-size: 110px;
+    opacity: 0;
+    scale: 2.2 2.2;
+    transition-property: opacity, scale;
+    transition-duration: 0.6s, 0.6s;
+    transition-delay: 0.1s, 0.1s;
+    transition-timing-function: ease-out-cubic, ease-out-bounce;
+}
+
+.screen--open > .end-title {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.end-screen--win > .end-title {
+    color: var(--c-gold);
+}
+
+.end-screen--lose > .end-title {
+    color: var(--c-text);
+    -unity-text-outline-color: var(--c-danger);
+}
+
+.end-buttons {
+    align-items: center;
+    margin-top: 40px;
+}
