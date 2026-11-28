@@ -20,7 +20,7 @@ namespace Butterfly.Death
         public static PredatorMeter Instance { get; private set; }
 
         [Header("Rates (percent per second)")]
-        public float riseWhileFlying = 2.5f;
+        public float riseWhileFlying = 1.5f;
         public float fallWhileHidden = 30f;
         public float fallWhileResting = 6f;
         [Tooltip("Speed above which the butterfly counts as flying.")]
