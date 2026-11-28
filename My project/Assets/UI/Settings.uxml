@@ -26,8 +26,12 @@
             <ui:Label text="Fullscreen" class="setting-label" />
             <ui:Toggle name="fullscreen" class="switch" />
         </ui:VisualElement>
-        <ui:VisualElement class="reveal delay-4">
-            <ui:Button name="settingsBack" text="Back" class="btn btn--primary settings-back" />
+        <ui:VisualElement class="reveal delay-4 settings-back" picking-mode="Ignore">
+            <ui:VisualElement class="pbtn-wrap pbtn-wrap--compact">
+                <ui:VisualElement class="pbtn-glow--outer" picking-mode="Ignore" />
+                <ui:VisualElement class="pbtn-glow--inner" picking-mode="Ignore" />
+                <ui:Button name="settingsBack" text="BACK" class="pbtn pbtn--primary pbtn--compact" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

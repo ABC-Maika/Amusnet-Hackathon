@@ -15,6 +15,8 @@ namespace Amusnet.Mess
         public int LastThreshold { get; private set; }
         public int GoalScore => goalScore;
         public bool HasReachedGoal => Score >= goalScore;
+        internal GameFlow Flow { get; set; }
+        internal bool CanInteract => Flow == null || Flow.IsRunning;
         public double ElapsedSeconds => goalTime ?? (startedAt.HasValue ? Time.timeAsDouble - startedAt.Value : 0d);
         public event Action<int> ScoreChanged;
         public event Action<int> ThresholdReached;

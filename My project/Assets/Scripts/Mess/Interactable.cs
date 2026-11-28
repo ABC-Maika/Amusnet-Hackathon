@@ -24,7 +24,7 @@ namespace Amusnet.Mess
 
         public bool TryInteract(MessManager manager, Interactable cause)
         {
-            if (!manager || !isActiveAndEnabled || HasInteracted || messValue <= 0) return false;
+            if (!manager || !manager.CanInteract || !isActiveAndEnabled || HasInteracted || messValue <= 0) return false;
             HasInteracted = true;
             ChainRoot = cause && cause.ChainRoot ? cause.ChainRoot : this;
             ChainRoot.ChainLength++;
@@ -34,6 +34,9 @@ namespace Amusnet.Mess
             OnInteracted(manager);
             return true;
         }
+
+        /// <summary>The ground props land on: the assigned terrain, or the loaded map's terrain when the map is its own scene.</summary>
+        protected static Terrain Ground(Terrain assigned) => assigned ? assigned : Terrain.activeTerrain;
 
         protected void Sound(AudioClip clip, float pitch = 1f)
         {

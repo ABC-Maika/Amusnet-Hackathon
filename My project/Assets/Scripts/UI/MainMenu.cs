@@ -30,7 +30,7 @@ public class MainMenu : MonoBehaviour
             hud.OpenSettings(() => UIAnim.SetShown(menuScreen, true));
         };
         root.Q<Button>("quitButton").clicked += Quit;
-        UIAnim.Loop(root.Q("logo"), "float-loop--b");
+        UIAnim.Loop(root.Q("logo"), "bob-loop--b");
     }
 
     // In Start, not OnEnable: GameFlow decides the opening state in its Awake, which may run after our OnEnable.
@@ -40,10 +40,18 @@ public class MainMenu : MonoBehaviour
     {
         if (starting) return;
         starting = true;
-        UIAnim.SetShown(menuScreen, false);
-        if (MenuCamera.Instance != null) MenuCamera.Instance.FlyToPlayer(flow.StartRun);
-        else flow.StartRun();
+        // The logo drifts up and the buttons drop (MainMenu.uss, .menu--exit); the camera swoops once they're gone.
+        menuScreen.pickingMode = PickingMode.Ignore;
+        menuScreen.AddToClassList("menu--exit");
+        menuScreen.schedule.Execute(() =>
+        {
+            UIAnim.SetShown(menuScreen, false);
+            if (MenuCamera.Instance != null) MenuCamera.Instance.FlyToPlayer(flow.StartRun);
+            else flow.StartRun();
+        }).ExecuteLater(UiExitMs);
     }
+
+    const long UiExitMs = 300; // matches the .menu--exit transitions in MainMenu.uss
 
     static void Quit()
     {

@@ -1,28 +1,23 @@
-/* Twilight monarch palette: indigo glass panels, cream text, monarch orange, lilac, magenta */
+/* Warm low-poly palette: butterfly cream, deep ink, foliage green, timber brown, pollen gold, sky blue.
+   Screens float over the live village; soft petal shapes, nothing harsh. */
 :root {
-    --c-white: #ffffff;
-    --c-text: #fff4e0;
-    --c-muted: #a99fd0;
-    --c-edge: #120f24;
-    --c-panel: rgba(28, 23, 54, 0.92);
-    --c-panel-edge: #3a3166;
-    --c-surface: #2c2650;
-    --c-surface-hi: #3a3270;
-    --c-track: rgba(255, 255, 255, 0.14);
-    --c-accent: #a78bfa;
-    --c-accent-hi: #c4b5fd;
-    --c-primary: #ff8a3d;
-    --c-primary-hi: #ffa463;
-    --c-primary-deep: #b9541a;
-    --c-on-primary: #1b1430;
-    --c-petal: #ff4f9a;
-    --c-petal-hi: #ff8cc4;
-    --c-gold: #ffc94a;
-    --c-danger: #ff5468;
-    --c-scrim: rgba(12, 9, 26, 0.62);
+    --c-cream: #F4EFE1;
+    --c-cream-hi: #FFFDF7;
+    --c-cream-lip: #C9BFA6;
+    --c-ink: #27252B;
+    --c-green: #728A52;
+    --c-earth: #8C694D;
+    --c-earth-deep: #5E4430;
+    --c-gold: #E9B65D;
+    --c-gold-lip: #B88A3C;
+    --c-sky: #8DB4C7;
+    --c-danger: #C8553D;
+    --c-track: #DCD4BF;
+    --c-scrim: rgba(39, 37, 43, 0.35);
+    --c-scrim-strong: rgba(39, 37, 43, 0.58);
 
     -unity-font: url("project://database/Assets/UI/Fonts/Inter-Regular.ttf");
-    color: var(--c-text);
+    color: var(--c-cream);
     font-size: 24px;
 }
 
@@ -37,106 +32,275 @@
 
 /* ---------- Text ---------- */
 
-.title {
+.display-title {
     -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
-    -unity-text-align: middle-center;
-    font-size: 72px;
-    color: var(--c-text);
-    -unity-text-outline-width: 0.2px;
-    -unity-text-outline-color: var(--c-edge);
-    text-shadow: 0 4px 14px rgba(12, 9, 26, 0.55);
+    font-size: 116px;
+    margin: 0 0 -18px 0;
+    padding: 0;
+    color: var(--c-cream);
+    text-shadow: 0 5px 0 rgba(39, 37, 43, 0.4);
 }
 
-.subtitle {
-    -unity-text-align: middle-center;
-    color: var(--c-text);
-    text-shadow: 0 2px 6px rgba(12, 9, 26, 0.6);
-    font-size: 22px;
-    letter-spacing: 4px;
+.kicker {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    font-size: 20px;
+    letter-spacing: 7px;
+    margin: 0 0 0 4px;
+    padding: 0;
+    color: var(--c-gold);
+    text-shadow: 0 2px 0 rgba(39, 37, 43, 0.45);
+}
+
+.lede {
+    font-size: 24px;
+    margin: 34px 0 0 4px;
+    padding: 0;
+    color: var(--c-cream);
+    text-shadow: 0 2px 0 rgba(39, 37, 43, 0.45);
 }
 
 .section-title {
     -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
-    -unity-text-align: middle-center;
-    font-size: 44px;
-    color: var(--c-text);
-    margin-bottom: 24px;
+    font-size: 48px;
+    margin: 0 0 24px 0;
+    color: var(--c-ink);
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Petal buttons: three round corners, one small "stem" corner ----------
+   Structure: .pbtn-wrap > .pbtn-glow--outer, .pbtn-glow--inner, Button.pbtn.
+   The wrapper lifts on hover; USS has no box-shadow, so the glow is two tinted shapes behind the button. */
 
-/* Chunky "pebble" buttons: a thick darker bottom edge gives depth;
-   hover lifts the button, press pushes it down onto that edge. */
-.btn {
-    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
-    width: 360px;
-    height: 70px;
-    margin: 7px 0;
-    padding: 0;
-    font-size: 26px;
-    letter-spacing: 1px;
-    -unity-text-align: middle-center;
-    color: var(--c-text);
-    background-color: var(--c-surface);
-    border-width: 2px;
-    border-bottom-width: 6px;
-    border-color: var(--c-edge);
-    border-radius: 20px;
-    transition-property: translate, background-color, border-color, border-bottom-width, color;
+.pbtn-wrap {
+    margin: 11px 0;
+    transition-property: translate, opacity;
     transition-duration: 0.14s;
     transition-timing-function: ease-out-cubic;
 }
 
-.btn:hover {
-    background-color: var(--c-surface-hi);
-    border-color: var(--c-accent);
-    color: var(--c-white);
-    translate: 0 -3px;
+.pbtn-wrap:hover {
+    translate: 0 -4px;
 }
 
-.btn:focus {
-    border-color: var(--c-accent);
+.pbtn-glow--outer,
+.pbtn-glow--inner {
+    position: absolute;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.14s;
+    transition-timing-function: ease-out-cubic;
 }
 
-.btn:active {
-    translate: 0 4px;
+.pbtn-wrap:hover .pbtn-glow--outer,
+.pbtn-wrap:hover .pbtn-glow--inner {
+    opacity: 1;
+}
+
+.pbtn-glow--outer {
+    background-color: rgba(233, 182, 93, 0.2);
+}
+
+.pbtn-glow--inner {
+    background-color: rgba(233, 182, 93, 0.5);
+}
+
+.pbtn {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    -unity-text-align: middle-left;
+    letter-spacing: 4px;
+    margin: 0;
+    border-width: 0;
+    transform-origin: center bottom;
+    transition-property: scale, border-bottom-width, border-color, background-color;
+    transition-duration: 0.14s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pbtn:active {
+    scale: 1.04 0.9;
+    transition-duration: 0.08s;
+}
+
+.pbtn:focus {
+    border-top-width: 3px;
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-color: var(--c-cream);
+}
+
+/* Primary: pollen gold */
+.pbtn--primary {
+    width: 384px;
+    height: 92px;
+    padding: 0 0 0 42px;
+    font-size: 32px;
+    color: var(--c-ink);
+    background-color: var(--c-gold);
+    border-bottom-width: 6px;
+    border-color: var(--c-gold-lip);
+    border-top-left-radius: 46px;
+    border-top-right-radius: 46px;
+    border-bottom-right-radius: 46px;
+    border-bottom-left-radius: 14px;
+}
+
+.pbtn--primary:active {
+    border-bottom-width: 3px;
+}
+
+.pbtn--primary:focus {
+    border-color: var(--c-ink);
+}
+
+.pbtn-wrap--primary > .pbtn-glow--inner {
+    top: -7px;
+    right: -7px;
+    bottom: -7px;
+    left: -7px;
+    border-top-left-radius: 53px;
+    border-top-right-radius: 53px;
+    border-bottom-right-radius: 53px;
+    border-bottom-left-radius: 21px;
+}
+
+.pbtn-wrap--primary > .pbtn-glow--outer {
+    top: -15px;
+    right: -15px;
+    bottom: -15px;
+    left: -15px;
+    border-top-left-radius: 61px;
+    border-top-right-radius: 61px;
+    border-bottom-right-radius: 61px;
+    border-bottom-left-radius: 29px;
+}
+
+/* Secondary: butterfly cream */
+.pbtn--secondary {
+    width: 324px;
+    height: 70px;
+    padding: 0 0 0 34px;
+    font-size: 22px;
+    color: var(--c-ink);
+    background-color: var(--c-cream);
+    border-bottom-width: 5px;
+    border-color: var(--c-cream-lip);
+    border-top-left-radius: 35px;
+    border-top-right-radius: 35px;
+    border-bottom-right-radius: 35px;
+    border-bottom-left-radius: 11px;
+}
+
+.pbtn--secondary:active {
     border-bottom-width: 2px;
-    background-color: var(--c-surface);
 }
 
-.btn--primary {
-    background-color: var(--c-primary);
-    border-color: var(--c-primary-deep);
-    color: var(--c-on-primary);
+.pbtn--secondary:focus {
+    border-color: var(--c-gold);
 }
 
-.btn--primary:hover {
-    background-color: var(--c-primary-hi);
-    border-color: var(--c-primary-deep);
-    color: var(--c-on-primary);
+.pbtn-wrap--secondary > .pbtn-glow--inner {
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    left: -6px;
+    border-top-left-radius: 41px;
+    border-top-right-radius: 41px;
+    border-bottom-right-radius: 41px;
+    border-bottom-left-radius: 17px;
 }
 
-.btn--primary:focus {
-    border-color: var(--c-white);
+.pbtn-wrap--secondary > .pbtn-glow--outer {
+    top: -13px;
+    right: -13px;
+    bottom: -13px;
+    left: -13px;
+    border-top-left-radius: 48px;
+    border-top-right-radius: 48px;
+    border-bottom-right-radius: 48px;
+    border-bottom-left-radius: 24px;
 }
 
-.btn--primary:active {
-    background-color: var(--c-primary);
+/* Ghost: outline only, least prominent; for dark scrims */
+.pbtn--ghost {
+    width: 264px;
+    height: 58px;
+    padding: 0 0 0 30px;
+    font-size: 18px;
+    color: var(--c-cream);
+    background-color: rgba(39, 37, 43, 0.3);
+    border-width: 2px;
+    border-color: rgba(244, 239, 225, 0.75);
+    border-top-left-radius: 29px;
+    border-top-right-radius: 29px;
+    border-bottom-right-radius: 29px;
+    border-bottom-left-radius: 9px;
+}
+
+.pbtn-wrap:hover > .pbtn--ghost {
+    background-color: rgba(39, 37, 43, 0.45);
+    border-color: var(--c-gold);
+}
+
+.pbtn-wrap--ghost > .pbtn-glow--inner {
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    left: -6px;
+    background-color: rgba(233, 182, 93, 0.32);
+    border-top-left-radius: 35px;
+    border-top-right-radius: 35px;
+    border-bottom-right-radius: 35px;
+    border-bottom-left-radius: 15px;
+}
+
+/* Compact primary, for buttons inside a card */
+.pbtn--compact {
+    width: 260px;
+    height: 68px;
+    padding: 0 0 0 32px;
+    font-size: 24px;
+    border-top-left-radius: 34px;
+    border-top-right-radius: 34px;
+    border-bottom-right-radius: 34px;
+    border-bottom-left-radius: 11px;
+}
+
+.pbtn-wrap--compact > .pbtn-glow--inner {
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    left: -6px;
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
+    border-bottom-right-radius: 40px;
+    border-bottom-left-radius: 17px;
+}
+
+.pbtn-wrap--compact > .pbtn-glow--outer {
+    top: -13px;
+    right: -13px;
+    bottom: -13px;
+    left: -13px;
+    border-top-left-radius: 47px;
+    border-top-right-radius: 47px;
+    border-bottom-right-radius: 47px;
+    border-bottom-left-radius: 24px;
 }
 
 /* ---------- Panels ---------- */
 
 .card {
     align-items: center;
-    padding: 40px 56px;
-    background-color: var(--c-panel);
-    border-width: 2px;
+    padding: 44px 56px;
+    background-color: var(--c-cream);
     border-bottom-width: 8px;
-    border-color: var(--c-panel-edge);
-    border-radius: 28px;
+    border-color: var(--c-cream-lip);
+    border-top-left-radius: 36px;
+    border-top-right-radius: 36px;
+    border-bottom-right-radius: 36px;
+    border-bottom-left-radius: 12px;
 }
 
-/* ---------- Screens: fade + zoom in, children slide in one after another ---------- */
+/* ---------- Screens: fade + gentle zoom in, children slide in one after another ---------- */
 
 .screen {
     position: absolute;
@@ -147,14 +311,42 @@
     align-items: center;
     justify-content: center;
     opacity: 0;
-    scale: 1.06 1.06;
+    scale: 1.04 1.04;
     transition-property: opacity, scale;
     transition-duration: 0.35s, 0.35s;
-    transition-timing-function: ease-out-cubic, ease-out-back;
+    transition-timing-function: ease-out-cubic, ease-out-cubic;
 }
 
 .screen--scrim {
     background-color: var(--c-scrim);
+}
+
+.screen--scrim-strong {
+    background-color: var(--c-scrim-strong);
+}
+
+/* Title and buttons in the left third, so the village stays the focus. */
+.side-screen {
+    align-items: flex-start;
+    padding-left: 160px;
+}
+
+.side-scrim {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.side-column {
+    width: 620px;
+    align-items: flex-start;
+}
+
+.side-buttons {
+    align-items: flex-start;
+    margin-top: 56px;
 }
 
 .screen--open {
@@ -168,10 +360,10 @@
 
 .reveal {
     opacity: 0;
-    translate: 0 40px;
+    translate: 0 32px;
     transition-property: opacity, translate;
     transition-duration: 0.45s, 0.45s;
-    transition-timing-function: ease-out-cubic, ease-out-back;
+    transition-timing-function: ease-out-cubic, ease-out-cubic;
 }
 
 .screen--open .reveal {
@@ -187,36 +379,25 @@
 
 /* Ping-pong loops: UIAnim.Loop toggles the --b class every time the transition ends. */
 
-.float-loop {
-    translate: 0 -8px;
+.bob-loop {
+    translate: 0 -6px;
     transition-property: translate;
-    transition-duration: 1.8s;
+    transition-duration: 1.6s;
     transition-timing-function: ease-in-out-sine;
 }
 
-.float-loop--b {
-    translate: 0 8px;
+.bob-loop--b {
+    translate: 0 6px;
 }
 
-.pulse-loop {
-    scale: 1 1;
-    transition-property: scale;
-    transition-duration: 0.9s;
-    transition-timing-function: ease-in-out-sine;
-}
-
-.pulse-loop--b {
-    scale: 1.05 1.05;
-}
-
-/* Full-screen white "cloud" cover for scene changes: starts on, fades out once the scene is up. */
+/* Full-screen cover for scene changes: starts on, fades out once the scene is up. */
 .fade {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
-    background-color: var(--c-edge);
+    background-color: var(--c-ink);
     opacity: 0;
     transition-property: opacity;
     transition-duration: 0.45s;
@@ -238,24 +419,25 @@
     align-items: center;
     width: 100%;
     height: 64px;
-    padding: 0 8px;
-    border-radius: 14px;
+    padding: 0 12px;
+    border-radius: 16px;
+    transition-property: background-color;
     transition-duration: 0.15s;
 }
 
 .setting-row:hover {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: rgba(39, 37, 43, 0.06);
 }
 
 .setting-label {
     width: 260px;
-    color: var(--c-text);
+    color: var(--c-ink);
 }
 
 .setting-value {
     width: 90px;
     -unity-text-align: middle-right;
-    color: var(--c-accent-hi);
+    color: var(--c-earth);
     -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
 }
 
@@ -284,10 +466,10 @@
     left: 0;
     right: 0;
     top: 50%;
-    height: 8px;
-    margin-top: -4px;
+    height: 10px;
+    margin-top: -5px;
     background-color: var(--c-track);
-    border-radius: 4px;
+    border-radius: 5px;
 }
 
 .slider .unity-base-slider__fill {
@@ -295,8 +477,8 @@
     top: 0;
     bottom: 0;
     left: 0;
-    background-color: var(--c-accent);
-    border-radius: 4px;
+    background-color: var(--c-gold);
+    border-radius: 5px;
 }
 
 .slider .unity-base-slider__dragger-border {
@@ -306,19 +488,19 @@
 .slider .unity-base-slider__dragger {
     position: absolute;
     top: 50%;
-    width: 26px;
-    height: 26px;
-    margin-top: -13px;
-    background-color: var(--c-text);
+    width: 28px;
+    height: 28px;
+    margin-top: -14px;
+    background-color: var(--c-cream-hi);
     border-width: 4px;
-    border-color: var(--c-accent);
-    border-radius: 13px;
+    border-color: var(--c-gold);
+    border-radius: 14px;
     transition-property: scale;
     transition-duration: 0.15s;
 }
 
 .slider:hover .unity-base-slider__dragger {
-    scale: 1.25 1.25;
+    scale: 1.2 1.2;
 }
 
 /* Toggle drawn as a sliding switch */
@@ -343,15 +525,15 @@
 .switch .unity-toggle__checkmark {
     width: 30px;
     height: 30px;
-    background-color: var(--c-text);
+    background-color: var(--c-cream-hi);
     border-radius: 15px;
     transition-property: translate;
     transition-duration: 0.2s;
-    transition-timing-function: ease-out-back;
+    transition-timing-function: ease-out-cubic;
 }
 
 .switch:checked .unity-toggle__input {
-    background-color: var(--c-accent);
+    background-color: var(--c-gold);
 }
 
 .switch:checked .unity-toggle__checkmark {

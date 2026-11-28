@@ -10,6 +10,7 @@ namespace Butterfly.Death
     ///  - MessManager score  -> AngerLevels.SetMess(score / goal) and GameHUD.SetMess
     ///  - RebelAnimal.AllyMess -> MessManager.AddMess (allies' chaos counts as mess)
     ///  - DeathManager.DeathFinished -> GameFlow.Lose()
+    ///  - MessManager goal reached -> GameFlow.Win(); messes score only while GameFlow.IsRunning
     /// Created automatically after every scene load; nothing to place by hand.
     /// </summary>
     public sealed class GameIntegration : MonoBehaviour
@@ -46,12 +47,19 @@ namespace Butterfly.Death
         void Update()
         {
             // Scenes reload on restart, so re-find the MessManager whenever it changes.
-            if (mess != null) return;
-            mess = FindFirstObjectByType<MessManager>();
-            if (mess == null) return;
-            mess.ScoreChanged += OnScore;
-            allyRemainder = 0f;
-            OnScore(mess.Score);
+            if (mess == null)
+            {
+                mess = FindFirstObjectByType<MessManager>();
+                if (mess == null) return;
+                mess.ScoreChanged += OnScore;
+                allyRemainder = 0f;
+                OnScore(mess.Score);
+            }
+            // Messes only score during live play; the run clock starts on Play.
+            var flow = GameFlow.Instance;
+            if (flow == null) return;
+            mess.Flow = flow;
+            if (flow.IsRunning) mess.BeginRun();
         }
 
         void Unhook()
@@ -66,6 +74,8 @@ namespace Butterfly.Death
             float normalised = mess.GoalScore > 0 ? Mathf.Clamp01(score / (float)mess.GoalScore) : 0f;
             if (AngerLevels.Instance != null) AngerLevels.Instance.SetMess(normalised);
             if (GameHUD.Instance != null) GameHUD.Instance.SetMess(normalised);
+            // Enough mess drives the villagers out: the run is won.
+            if (mess.HasReachedGoal && GameFlow.Instance != null && GameFlow.Instance.IsRunning) GameFlow.Instance.Win();
         }
 
         void OnAllyMess(RebelAnimal ally, float amount)

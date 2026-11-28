@@ -1,11 +1,13 @@
+using Amusnet.World;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Loads the village map scene alongside this (systems) scene, so the map's owner can keep editing it
 /// on its own. The map becomes the active scene so its sky, fog and lighting apply; its own camera
-/// is switched off because this scene's camera (MenuCamera) drives the view. The player is moved to
-/// the map's spawn point.
+/// and any preview butterfly rig are switched off because this scene owns the camera and the player,
+/// and the player is moved to the map's spawn point.
 /// </summary>
 public class MapLoader : MonoBehaviour
 {
@@ -43,10 +45,23 @@ public class MapLoader : MonoBehaviour
             RenderSettings.skybox = skyOverride;
             DynamicGI.UpdateEnvironment();
         }
-        foreach (var root in map.GetRootGameObjects())
+        var roots = map.GetRootGameObjects();
+        foreach (var root in roots)
         {
+            // This scene owns the player and the cameras: switch off the map's own preview rig
+            // (its butterfly, follow camera, pollen trail and cameras) so there is only one of each.
+            if (root.GetComponentInChildren<ButterflyController>(true) || root.GetComponentInChildren<EnvironmentFlightPreview>(true) ||
+                root.GetComponentInChildren<CinemachineCamera>(true) || root.GetComponentInChildren<ButterflyPollen>(true))
+            {
+                root.SetActive(false);
+                continue;
+            }
             foreach (var cam in root.GetComponentsInChildren<Camera>()) cam.gameObject.SetActive(false);
             foreach (var listener in root.GetComponentsInChildren<AudioListener>()) listener.enabled = false;
+        }
+
+        foreach (var root in roots)
+        {
             if (player == null) continue;
             var spawn = FindDeep(root.transform, spawnPointName);
             if (spawn == null) continue;

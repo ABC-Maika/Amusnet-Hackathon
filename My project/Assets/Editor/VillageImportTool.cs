@@ -22,7 +22,7 @@ using UnityEngine.SceneManagement;
 public static class VillageImportTool
 {
     const string VillagePath = "Assets/Scenes/Village.unity";
-    const string PreviewPath = "Assets/Scenes/ButterflyPreview.unity";
+    const string PreviewPath = "Assets/Scenes/Old_Scenes/ButterflyPreview.unity";
 
     static readonly string[] VillageRoots =
     {
