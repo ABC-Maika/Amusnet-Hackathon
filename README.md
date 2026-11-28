@@ -4,6 +4,12 @@ Open `My project/Assets/Scenes/Sprint3Village.unity` and press Play. The butterf
 
 **WASD** moves the butterfly. **Space / Left Shift** change height. **E** sends a gust toward a nearby prop. Fly into a prop to touch it directly. Press **Tab** and click a district to fly to its starting point with your score intact. **R** starts a fresh run in the current district.
 
+## Repeatable combo tests
+
+Open `My project/Assets/Scenes/Sprint3ComboTests.unity` and press **Play**. Choose a setup on the left, then press **E** or click **Gust**. **R** or **Reseed** restores the props, butterfly position, score, and gust cooldown, including during a chain. **Q** rotates the overview. The footer shows the actual hits and whether they came from the intended starter.
+
+The blue and red springboard setups begin on opposite sides of the same board. The cask rebound needs a second gust while the barrel rolls. To rebuild the fixtures after editing the village, use **Tools → Sprint 3 → Regenerate Combo Test Scene** in Edit mode.
+
 ## The seven combos
 
 | District | Try this |

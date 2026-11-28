@@ -27,6 +27,7 @@ namespace Amusnet.World
         readonly Queue<(string label, int points, float expiresAt)> recentMess = new();
         Interactable[][] districtProps;
         [SerializeField] private bool marketView;
+        [SerializeField] private bool comboTest;
         private WingGust gust;
         private int bestChain;
         private readonly Dictionary<Transform, int> districtChains = new();
@@ -126,9 +127,9 @@ namespace Amusnet.World
         {
             var k = Keyboard.current;
             if (k == null) return;
-            if (districts.Length > 0 && k.tabKey.wasPressedThisFrame)
+            if (!comboTest && districts.Length > 0 && k.tabKey.wasPressedThisFrame)
                 showMap = !showMap;
-            if (mess && k.rKey.wasPressedThisFrame)
+            if (!comboTest && mess && k.rKey.wasPressedThisFrame)
             {
                 if (marketView) restartDistrict = ClosestDistrict()?.name;
                 SceneManager.LoadScene(gameObject.scene.path);
@@ -155,6 +156,7 @@ namespace Amusnet.World
         void LateUpdate()
         {
             CheckInteractionVolumes();
+            if (comboTest) return;
             Vector3 focus = transform.position;
             if (marketView)
             {
@@ -191,6 +193,7 @@ namespace Amusnet.World
         }
         void OnGUI()
         {
+            if (comboTest) return;
             if (marketView && mess)
             {
                 DrawMarketHud();
