@@ -14,7 +14,7 @@ namespace Amusnet.World
             [System.NonSerialized] public bool pulled;
         }
 
-        private enum Phase { Waiting, Approaching, Tugging, Dropping, Returning, BackingUp, Dragging, RunningThroughGate, Finished }
+        private enum Phase { Waiting, Approaching, ApproachingVillager, Tugging, Dropping, Returning, BackingUp, Dragging, RunningThroughGate, Finished, PatrolBump }
 
         [SerializeField] private ParticleSystem pollen;
         [SerializeField] private WindSystem wind;
@@ -48,6 +48,15 @@ namespace Amusnet.World
         private Quaternion sheetEndRotation;
         private Vector3 sheetEndScale;
         private float sheetBlend = 1f;
+        [SerializeField] private Transform[] patrolPoints;
+        [SerializeField] private LayerMask villagerLayers;
+        [SerializeField] private float detectionRadius = 4f;
+        [SerializeField] private float bumpRadius = 0.8f;
+        [SerializeField] private UnityEngine.Events.UnityEvent<Transform> onPatrolBump = new();
+
+        private int patrolIndex;
+        private Transform bumpTarget;
+        private float nextBumpTime;
 
         public bool ShirtPulled => shirt.pulled;
         public bool LineDown { get; private set; }
@@ -98,12 +107,17 @@ namespace Amusnet.World
             switch (phase)
             {
                 case Phase.Waiting:
+                    if (gate && gate.CanGoatApproach)
+                    {
+                        SetPhase(Phase.ApproachingVillager);
+                        break;
+                    }
                     if (!sheet.pulled && sheet.pollen >= pollenNeeded)
                         Approach(sheet);
                     else if (!shirt.pulled && shirt.pollen >= pollenNeeded)
                         Approach(shirt);
                     else
-                        goat.rotation = Quaternion.RotateTowards(goat.rotation, homeRotation, 300f * Time.deltaTime);
+                        Patrol();
                     break;
                 case Phase.Approaching:
                     if (WalkTo(approach))
@@ -122,6 +136,37 @@ namespace Amusnet.World
                 case Phase.BackingUp:
                     BackIntoTimber();
                     break;
+                case Phase.ApproachingVillager:
+                    if (!gate || !gate.CanGoatApproach)
+                    {
+                        SetPhase(Phase.Returning);
+                        break;
+                    }
+                    WalkTo(gate.VillagerPosition);
+                    break;
+                case Phase.PatrolBump:
+                    if (!bumpTarget || !bumpTarget.gameObject.activeInHierarchy ||
+                        (bumpTarget.position - goat.position).sqrMagnitude >
+                            detectionRadius * detectionRadius)
+                    {
+                        SetPhase(Phase.Waiting);
+                        break;
+                    }
+
+                    if ((bumpTarget.position - goat.position).sqrMagnitude <= bumpRadius * bumpRadius)
+                    {
+                        nextBumpTime = Time.time + 3f;
+                        SetPhase(Phase.Waiting);
+                        onPatrolBump.Invoke(bumpTarget);
+                        break;
+                    }
+
+                    WalkTo(bumpTarget.position);
+                    break;
+                case Phase.Finished:
+                    if (gate && gate.CanGoatApproach)
+                        SetPhase(Phase.ApproachingVillager);
+                    break;
                 case Phase.Dragging:
                 case Phase.RunningThroughGate:
                     RunToExit();
@@ -135,7 +180,40 @@ namespace Amusnet.World
                 Quaternion.Euler(headPitch, 0f, 0f), 280f * Time.deltaTime);
             BlendSheetPose();
         }
+        private void Patrol()
+        {
+            if (Time.time >= nextBumpTime)
+            {
+                Transform nearest = null;
+                float nearestDistance = detectionRadius * detectionRadius;
 
+                foreach (Collider hit in Physics.OverlapSphere(
+     goat.position, detectionRadius, villagerLayers, QueryTriggerInteraction.Ignore))
+                {
+                    Transform person = hit.transform;
+
+                    if (!person || !person.gameObject.activeInHierarchy)
+                        continue;
+
+                    float distance = (person.position - goat.position).sqrMagnitude;
+                    if (distance <= nearestDistance)
+                    {
+                        nearest = person;
+                        nearestDistance = distance;
+                    }
+                }
+
+                if (nearest)
+                {
+                    bumpTarget = nearest;
+                    SetPhase(Phase.PatrolBump);
+                    return;
+                }
+            }
+
+            if (patrolPoints.Length > 0 && WalkTo(patrolPoints[patrolIndex].position))
+                patrolIndex = (patrolIndex + 1) % patrolPoints.Length;
+        }
         private void CatchPollen()
         {
             int count = pollen.GetParticles(particles);

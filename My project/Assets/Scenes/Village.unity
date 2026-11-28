@@ -11967,7 +11967,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 52
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -19081,7 +19081,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 80
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -30111,6 +30111,10 @@ MonoBehaviour:
   maximumTurnLean: 7
   boostPullback: 1.15
   motionResponse: 5
+  turnCatchUp: 1.6
+  pitchFollow: 0.4
+  boostFovKick: 14
+  speedFovKick: 5
 --- !u!114 &436003446
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31477,6 +31481,7 @@ GameObject:
   - component: {fileID: 452995352}
   - component: {fileID: 452995351}
   - component: {fileID: 452995353}
+  - component: {fileID: 452995354}
   m_Layer: 0
   m_Name: Preview Camera
   m_TagString: MainCamera
@@ -31582,6 +31587,50 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!114 &452995354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 452995350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1001 &453243621
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -78386,21 +78435,25 @@ MonoBehaviour:
     tools: 0
     speedMultiplier: 1
     noticeRadius: 8
+    scoreMultiplier: 1
   - tier: 1
     threshold: 0.25
     tools: 1
     speedMultiplier: 1.1
     noticeRadius: 10
+    scoreMultiplier: 1.25
   - tier: 2
     threshold: 0.55
     tools: 11
     speedMultiplier: 1.25
     noticeRadius: 13
+    scoreMultiplier: 1.5
   - tier: 3
     threshold: 0.8
     tools: 31
     speedMultiplier: 1.4
     noticeRadius: 16
+    scoreMultiplier: 2
   canCoolDown: 0
   onTierChanged:
     m_PersistentCalls:
@@ -92060,6 +92113,7 @@ MonoBehaviour:
   riseWhileFlying: 1.5
   fallWhileHidden: 30
   fallWhileResting: 6
+  onlyHidingSpotsHelp: 0
   flyingSpeed: 0.6
   landOnFlowerAt: 55
   hideAt: 80
@@ -101292,7 +101346,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 64
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -131347,7 +131401,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 46
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
