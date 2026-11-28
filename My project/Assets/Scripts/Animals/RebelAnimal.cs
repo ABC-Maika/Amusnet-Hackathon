@@ -74,6 +74,7 @@ namespace Butterfly.Animals
 
         void Update()
         {
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) return;
             if (!IsAlly) UpdateRecruit(); else UpdateAlly();
         }
 

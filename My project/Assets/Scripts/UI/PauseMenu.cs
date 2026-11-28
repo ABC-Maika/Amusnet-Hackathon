@@ -135,6 +135,8 @@ namespace Butterfly.UI
             Time.timeScale = 1f;
             Time.fixedDeltaTime = 0.02f;
             AudioListener.pause = false;
+            // In the game the map is the active scene; GameFlow reloads the systems scene that loads it.
+            if (GameFlow.Instance != null) { GameFlow.Instance.Restart(); return; }
             var scene = SceneManager.GetActiveScene();
             if (scene.buildIndex >= 0)
                 SceneManager.LoadScene(scene.buildIndex);

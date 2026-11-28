@@ -24,6 +24,8 @@ public class GameHUD : MonoBehaviour
     RadialMeter predatorMeter;
     float mess, multiplier = 1f, predator, safeUntil, toastUntil;
     bool wasHidden, chasedWhileHidden;
+    string coverKind = "", coverText;
+    static readonly string[] CoverKinds = { "hidden", "boost", "safe" };
     bool leaving;
     Action afterSettings;
 
@@ -63,12 +65,23 @@ public class GameHUD : MonoBehaviour
         string kind = null, text = null;
         if (Time.unscaledTime < safeUntil) { kind = "safe"; text = "Safe: the predator lost you"; }
         else if (hidden) { kind = "hidden"; text = "Hidden"; }
-        else if (boostSecondsLeft > 0f) { kind = "boost"; text = $"Speed boost {boostSecondsLeft:0}s"; }
+        else if (boostSecondsLeft > 0f) { kind = "boost"; text = BoostText(Mathf.CeilToInt(boostSecondsLeft)); }
 
-        coverStatus.EnableInClassList("cover-status--off", kind == null);
-        foreach (var k in new[] { "hidden", "boost", "safe" })
-            coverStatus.EnableInClassList("cover-status--" + k, k == kind);
-        if (text != null) coverStatus.text = text;
+        // Called every frame: only touch the UI when something changed.
+        if (kind != coverKind)
+        {
+            coverKind = kind;
+            coverStatus.EnableInClassList("cover-status--off", kind == null);
+            foreach (var k in CoverKinds) coverStatus.EnableInClassList("cover-status--" + k, k == kind);
+        }
+        if (text != null && !ReferenceEquals(text, coverText)) coverStatus.text = coverText = text;
+    }
+
+    static readonly string[] boostTexts = new string[16];
+    static string BoostText(int seconds)
+    {
+        seconds = Mathf.Clamp(seconds, 0, boostTexts.Length - 1);
+        return boostTexts[seconds] ??= $"Speed boost {seconds}s";
     }
 
     /// <summary>Shows a short message above the bottom of the screen.</summary>
