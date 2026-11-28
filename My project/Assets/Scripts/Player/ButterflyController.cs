@@ -5,6 +5,11 @@ using UnityEngine.InputSystem;
 public sealed class ButterflyController : MonoBehaviour
 {
     private static readonly int Flapping = Animator.StringToHash("Flapping");
+    private static readonly int FlightPose = Animator.StringToHash("FlightPose");
+    private static readonly int FlightLegPose = Animator.StringToHash("FlightLegPose");
+    private static readonly int FlightFlapRate = Animator.StringToHash("FlightFlapRate");
+
+    private enum WingPose { Idle, Takeoff, Flight, LandingApproach, Touchdown }
 
     [SerializeField] private ButterflyFlightSettings settings;
     [SerializeField] private Animator wings;
@@ -14,6 +19,11 @@ public sealed class ButterflyController : MonoBehaviour
     private Vector3 velocity;
     private float yaw;
     private float pitch;
+    private float takeoffTime;
+    private float touchdownTime;
+    private bool wasSupported;
+    private bool hasFlightPose;
+    private bool hasDirectionalFlight;
 
     public bool IsBoosting { get; private set; }
     public float Speed => motor != null && motor.enabled ? motor.velocity.magnitude : 0f;
@@ -22,6 +32,16 @@ public sealed class ButterflyController : MonoBehaviour
     {
         motor = GetComponent<CharacterController>();
         yaw = transform.eulerAngles.y;
+        if (wings != null)
+        {
+            foreach (AnimatorControllerParameter parameter in wings.parameters)
+            {
+                if (parameter.nameHash == FlightPose)
+                    hasFlightPose = true;
+                if (parameter.nameHash == FlightLegPose)
+                    hasDirectionalFlight = true;
+            }
+        }
         if (settings == null || visual == null)
         {
             Debug.LogError("Assign flight settings and the flight attitude transform to the butterfly.", this);
@@ -67,9 +87,10 @@ public sealed class ButterflyController : MonoBehaviour
         if (grounded && (steer.y <= 0f || pitch >= 0f))
         {
             // Keep ground contact current, including when a supporting surface moves away.
-            SetWingAnimation((motor.Move(Vector3.down * deltaTime) & CollisionFlags.Below) == 0);
+            bool supported = (motor.Move(Vector3.down * deltaTime) & CollisionFlags.Below) != 0;
             velocity = Vector3.zero;
             IsBoosting = false;
+            UpdateWingAnimation(supported, supported && steer.y > 0.05f, deltaTime);
             return;
         }
 
@@ -81,7 +102,7 @@ public sealed class ButterflyController : MonoBehaviour
         bool landed = (contacts & CollisionFlags.Below) != 0;
         velocity = landed ? Vector3.zero : motor.velocity;
         IsBoosting = boost && !landed && Vector3.Dot(velocity, visual.forward) > 0.1f;
-        SetWingAnimation(!landed);
+        UpdateWingAnimation(landed, grounded && steer.y > 0.05f, deltaTime);
     }
 
     private void OnDisable()
@@ -89,10 +110,50 @@ public sealed class ButterflyController : MonoBehaviour
         IsBoosting = false;
     }
 
-    private void SetWingAnimation(bool airborne)
+    private void UpdateWingAnimation(bool supported, bool liftingOff, float deltaTime)
     {
-        if (wings != null)
-            wings.SetBool(Flapping, airborne);
+        if (wings == null)
+            return;
+
+        wings.SetBool(Flapping, !supported);
+        if (!hasFlightPose)
+            return;
+
+        takeoffTime = liftingOff ? 0.34f : Mathf.Max(0f, takeoffTime - deltaTime);
+        touchdownTime = supported && !wasSupported && !liftingOff
+            ? 0.34f
+            : Mathf.Max(0f, touchdownTime - deltaTime);
+        wasSupported = supported;
+
+        WingPose pose;
+        if (liftingOff || (!supported && takeoffTime > 0f))
+            pose = WingPose.Takeoff;
+        else if (supported)
+            pose = touchdownTime > 0f ? WingPose.Touchdown : WingPose.Idle;
+        else
+            pose = IsNearLandingSurface() ? WingPose.LandingApproach : WingPose.Flight;
+
+        wings.SetInteger(FlightPose, (int)pose);
+        if (hasDirectionalFlight)
+        {
+            float reach = Mathf.InverseLerp(-0.8f, 1.15f, velocity.y);
+            wings.SetFloat(FlightLegPose, reach, 0.13f, deltaTime);
+            wings.SetFloat(FlightFlapRate, Mathf.Lerp(0.85f, 1.23f, reach), 0.13f, deltaTime);
+        }
+    }
+
+    private bool IsNearLandingSurface()
+    {
+        if (velocity.y >= -0.12f)
+            return false;
+
+        Bounds bounds = motor.bounds;
+        // Reach for the ground sooner during a fast descent.
+        float anticipation = Mathf.Clamp(-velocity.y * 0.35f, 0.33f, 0.8f);
+        Vector3 ahead = Vector3.ClampMagnitude(Vector3.ProjectOnPlane(velocity, Vector3.up) * 0.12f, 0.3f);
+        return Physics.Raycast(bounds.center + ahead, Vector3.down, out RaycastHit surface,
+            bounds.extents.y + anticipation, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
+            Vector3.Angle(surface.normal, Vector3.up) <= motor.slopeLimit;
     }
 
     private static float ToAxis(bool positive, bool negative)
