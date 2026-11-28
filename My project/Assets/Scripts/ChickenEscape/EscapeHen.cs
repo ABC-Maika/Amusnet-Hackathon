@@ -14,11 +14,12 @@ namespace Amusnet.ChickenEscape
         readonly Vector3[] corners = new Vector3[16];
         CharacterController motor;
         NavMeshPath path;
-        Vector3 home, motion;
+        Vector3 home, motion, holdingPoint;
         float nextPathAt, calledAt, vertical, idlePhase;
         int corner, cornerCount;
 
         public bool Saved { get; private set; }
+        public bool Caught { get; private set; }
         public bool Following { get; private set; }
 
         void Awake()
@@ -34,13 +35,21 @@ namespace Amusnet.ChickenEscape
             if (Saved) return;
             Vector3 steer = Vector3.zero;
             float speed = 0f;
-            if (Following)
+            if (Caught)
+            {
+                if (Flat(holdingPoint - transform.position).sqrMagnitude > .4f)
+                {
+                    steer = FollowPath(holdingPoint);
+                    speed = 3.6f;
+                }
+            }
+            else if (Following)
             {
                 float distance = Flat(target - transform.position).magnitude;
                 if (pathOpen && distance > (enterExit ? .08f : 1.22f))
                 {
                     steer = FollowPath(target);
-                    speed = Mathf.Lerp(1.8f, 7.45f, Mathf.InverseLerp(.7f, 5.3f, distance));
+                    speed = Mathf.Lerp(2.2f, 5.8f, Mathf.InverseLerp(.7f, 4.8f, distance));
                 }
                 else cornerCount = 0;
             }
@@ -105,12 +114,21 @@ namespace Amusnet.ChickenEscape
             return corner < cornerCount ? Flat(corners[corner] - transform.position).normalized : Vector3.zero;
         }
 
-        public bool HearBark(Vector3 origin)
+        public bool HearBark()
         {
-            if (Saved || Following || Flat(transform.position - origin).sqrMagnitude > 8.5f * 8.5f) return false;
+            if (Saved || Caught || Following) return false;
             Following = true;
             calledAt = Time.time;
             return true;
+        }
+
+        public void CatchAt(Vector3 point)
+        {
+            Following = false;
+            Caught = true;
+            holdingPoint = point;
+            nextPathAt = 0f;
+            cornerCount = 0;
         }
 
         static Vector3 Flat(Vector3 vector) => Vector3.ProjectOnPlane(vector, Vector3.up);
@@ -118,6 +136,7 @@ namespace Amusnet.ChickenEscape
         public void Rescue(Vector3 exitDirection)
         {
             Saved = true;
+            Following = false;
             motor.enabled = false;
             StartCoroutine(RunToSafety(exitDirection));
         }

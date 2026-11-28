@@ -8,6 +8,7 @@ namespace Amusnet.ChickenEscape
         [SerializeField] Animator animator;
         [SerializeField] Transform model;
 
+        const float BarkCooldown = 1.8f;
         static readonly int Speed = Animator.StringToHash("Speed");
         CharacterController motor;
         Vector3 velocity;
@@ -17,9 +18,12 @@ namespace Amusnet.ChickenEscape
         float barkAt;
         float heldUntil;
         float bondedAt = float.NegativeInfinity;
+        float recoverAt;
+        bool exhausted;
 
         public Vector3 Velocity => velocity;
-        public float BarkCharge => Mathf.Clamp01(1f - (barkAt - Time.time) / 1.65f);
+        public float BarkCharge => Mathf.Clamp01(1f - (barkAt - Time.time) / BarkCooldown);
+        public float Stamina { get; private set; } = 1f;
         public bool IsStopped => Time.time < heldUntil;
         public Vector3 TetherKnot { get; private set; }
         public Vector3 Nose => transform.position + transform.forward * .61f + Vector3.up * .52f;
@@ -67,8 +71,19 @@ namespace Amusnet.ChickenEscape
         {
             if (IsStopped) input = Vector2.zero;
             Vector3 direction = new(input.x, 0f, input.y);
-            float pace = dragging ? 3.9f : sprint ? 7.6f : 5.25f;
-            float response = controlled ? direction.sqrMagnitude > .01f ? 27f : 32f : 5.8f;
+            bool moving = direction.sqrMagnitude > .01f;
+            if (!sprint && Stamina > .18f) exhausted = false;
+            bool sprinting = sprint && moving && !dragging && !exhausted;
+            if (sprinting)
+            {
+                Stamina = Mathf.Max(0f, Stamina - .31f * Time.deltaTime);
+                exhausted = Stamina <= 0f;
+                recoverAt = Time.time + .6f;
+            }
+            else if (Time.time >= recoverAt)
+                Stamina = Mathf.Min(1f, Stamina + (moving ? .23f : .4f) * Time.deltaTime);
+            float pace = dragging ? 3.55f : sprinting ? 7.45f : 4.8f;
+            float response = controlled ? moving ? 27f : 32f : 21f;
             velocity = Vector3.MoveTowards(velocity, direction * pace, response * Time.deltaTime);
             if (velocity.sqrMagnitude > .04f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation,
@@ -92,14 +107,17 @@ namespace Amusnet.ChickenEscape
         public bool Bark()
         {
             if (Time.time < barkAt || IsStopped) return false;
-            barkAt = Time.time + 1.65f;
+            barkAt = Time.time + BarkCooldown;
             return true;
         }
 
         public void Hesitate()
         {
             if (IsStopped) return;
-            heldUntil = Time.time + .75f;
+            heldUntil = Time.time + 1.1f;
+            Stamina = Mathf.Max(0f, Stamina - .28f);
+            exhausted |= Stamina <= 0f;
+            recoverAt = Time.time + 1.1f;
             velocity *= .18f;
         }
     }

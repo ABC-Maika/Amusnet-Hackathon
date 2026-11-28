@@ -7,17 +7,25 @@
                 <ui:Label name="progress" text="0 / 6" class="counter" />
                 <ui:VisualElement name="pips" class="pips" picking-mode="Ignore" />
             </ui:VisualElement>
-            <ui:Label name="following" class="counter" />
+            <ui:Label name="flock" class="flock" />
         </ui:VisualElement>
         <ui:VisualElement class="right-card" picking-mode="Ignore">
             <ui:Label name="role" text="Farm dog" class="role" />
             <ui:Label name="clock" class="clock" />
+            <ui:VisualElement name="stamina" class="stamina" picking-mode="Ignore">
+                <ui:Label text="Stamina" class="stamina-label" />
+                <ui:VisualElement class="stamina-track">
+                    <ui:VisualElement name="stamina-fill" class="stamina-fill" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label name="guide" class="marker guide" picking-mode="Ignore" />
         <ui:Label name="orchard" text="Orchard gap" class="marker exit" picking-mode="Ignore" />
         <ui:Label name="lane" text="Farm lane" class="marker exit" picking-mode="Ignore" />
+        <ui:Label name="keeper" class="marker keeper" picking-mode="Ignore" />
+        <ui:Label name="decoy" text="Gust decoy" class="marker guide" picking-mode="Ignore" />
         <ui:VisualElement class="prompt" picking-mode="Ignore">
-            <ui:VisualElement class="prompt-line" picking-mode="Ignore">
+            <ui:VisualElement name="prompt-line" class="prompt-line" picking-mode="Ignore">
                 <ui:Label name="prompt-key" class="keycap" />
                 <ui:Label name="prompt-text" class="prompt-text" />
             </ui:VisualElement>

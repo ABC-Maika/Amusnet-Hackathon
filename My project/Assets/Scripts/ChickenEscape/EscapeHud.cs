@@ -8,10 +8,10 @@ namespace Amusnet.ChickenEscape
     {
         [SerializeField] MarketEscapeRun run;
         [SerializeField] Camera view;
-        VisualElement root, pips, backdrop, rescueProgress;
-        Label objective, progress, following, role, clock, key, hint, details, spot, orchard, lane, title, result;
+
+        VisualElement root, pips, backdrop, rescueProgress, stamina, staminaFill, promptLine;
+        Label objective, progress, flock, role, clock, key, hint, details, guide, orchard, lane, keeper, decoy, title, result;
         Button retry, menu;
-        int shownSaved = -1;
 
         void OnEnable()
         {
@@ -19,16 +19,21 @@ namespace Amusnet.ChickenEscape
             if (root == null) return;
             objective = root.Q<Label>("objective");
             rescueProgress = root.Q("rescue-progress");
-            following = root.Q<Label>("following");
+            flock = root.Q<Label>("flock");
             progress = root.Q<Label>("progress");
             role = root.Q<Label>("role");
             clock = root.Q<Label>("clock");
+            stamina = root.Q("stamina");
+            staminaFill = root.Q("stamina-fill");
+            promptLine = root.Q("prompt-line");
             key = root.Q<Label>("prompt-key");
             hint = root.Q<Label>("prompt-text");
             details = root.Q<Label>("controls");
-            spot = root.Q<Label>("guide");
+            guide = root.Q<Label>("guide");
             orchard = root.Q<Label>("orchard");
             lane = root.Q<Label>("lane");
+            keeper = root.Q<Label>("keeper");
+            decoy = root.Q<Label>("decoy");
             pips = root.Q("pips");
             backdrop = root.Q("end");
             title = root.Q<Label>("end-title");
@@ -39,7 +44,7 @@ namespace Amusnet.ChickenEscape
             menu.clicked += run.QuitToWorkspace;
             pips.Clear();
             for (int i = 0; i < run.Total; i++)
-                pips.Add(new VisualElement { name = $"hen-{i}" });
+                pips.Add(new VisualElement());
         }
 
         void OnDisable()
@@ -58,93 +63,133 @@ namespace Amusnet.ChickenEscape
         {
             if (progress == null) return;
             var phase = run.Current;
-            bool intro = phase is MarketEscapeRun.Phase.MeetDog or MarketEscapeRun.Phase.Trust;
+            bool inFarm = phase == MarketEscapeRun.Phase.Farm;
             bool finished = phase is MarketEscapeRun.Phase.Won or MarketEscapeRun.Phase.Lost;
             bool overlay = finished || run.IsPaused;
             Toggle(backdrop, overlay);
-            if (overlay)
-            {
-                title.text = run.IsPaused ? "Paused" : phase == MarketEscapeRun.Phase.Won ? "The flock is free" : "The farm is closing";
-                result.text = run.IsPaused ? $"{run.Saved} of {run.Total} chickens safe" :
-                    phase == MarketEscapeRun.Phase.Won ? $"{run.Saved} saved  ·  {FormatTime(run.Elapsed)}  ·  {run.OrchardSaved} via orchard" :
-                    $"{run.Saved} of {run.Total} chickens made it out";
-                retry.text = run.IsPaused ? "Resume" : "Play again";
-            }
-            if (shownSaved != run.Saved)
-            {
-                shownSaved = run.Saved;
-                progress.text = $"{run.Saved} / {run.Total}";
-                for (int i = 0; i < pips.childCount; i++) pips[i].EnableInClassList("saved", i < run.Saved);
-            }
-            role.text = run.IsButterfly ? "Butterfly" : "Farm dog";
+            backdrop.EnableInClassList("failed", phase == MarketEscapeRun.Phase.Lost);
+            if (overlay) ShowOutcome();
+
             objective.text = phase == MarketEscapeRun.Phase.MeetDog ? "Free the farm dog" :
-                phase == MarketEscapeRun.Phase.Trust ? "You earned his trust" : "Get the chickens out";
-            Toggle(rescueProgress, !intro);
-            Toggle(following, !intro && run.Following > 0);
-            if (run.Following > 0) following.text = $"{run.Following} following the dog";
-            clock.text = FormatTime(run.Remaining);
-            clock.EnableInClassList("urgent", run.Remaining < 24f);
-            Toggle(clock, phase == MarketEscapeRun.Phase.Chase);
+                phase == MarketEscapeRun.Phase.Trust ? "You earned his trust" :
+                $"Rescue at least {MarketEscapeRun.RescueTarget} hens";
+            progress.text = $"{run.Saved}/{run.Total} safe";
+            flock.text = $"{run.Following}/{MarketEscapeRun.FlockLimit} in tow   ·   {run.Caught} caught";
+            Toggle(rescueProgress, inFarm || finished);
+            Toggle(flock, inFarm || finished);
+            for (int i = 0; i < pips.childCount; i++)
+            {
+                bool saved = i < run.Saved;
+                pips[i].EnableInClassList("saved", saved);
+                pips[i].EnableInClassList("caught", i >= run.Total - run.Caught);
+                pips[i].EnableInClassList("following", !saved && i < run.Saved + run.Following);
+            }
+
+            role.text = run.IsButterfly ? "Butterfly" : "Farm dog";
+            clock.text = $"Lockdown  {FormatTime(run.Remaining)}";
+            clock.EnableInClassList("urgent", run.Remaining <= 11f);
+            Toggle(clock, inFarm && run.AlarmActive);
+            Toggle(stamina, inFarm && !run.IsButterfly);
+            staminaFill.style.width = Length.Percent(run.Stamina * 100f);
+            staminaFill.EnableInClassList("spent", run.Stamina < .23f);
+
             Prompt(phase);
             var marker = run.PrimaryMarker();
-            Point(spot, marker, !overlay && marker != Vector3.zero);
-            spot.text = phase == MarketEscapeRun.Phase.MeetDog ? "Dog’s leash" :
-                phase == MarketEscapeRun.Phase.FirstHen ? "Loose hen" :
-                phase == MarketEscapeRun.Phase.BackToDog ? "Farm dog" :
-                phase == MarketEscapeRun.Phase.OpenPen && !run.IsButterfly ? "Butterfly" :
-                run.ActorPosition.z > 2.24f || phase == MarketEscapeRun.Phase.Chase ? "Latch" : "Blue gap";
-            Point(orchard, run.OrchardMarker, !overlay && phase is MarketEscapeRun.Phase.FirstHen or MarketEscapeRun.Phase.Chase);
-            Point(lane, run.LaneMarker, !overlay && phase == MarketEscapeRun.Phase.Chase);
+            guide.text = phase == MarketEscapeRun.Phase.MeetDog ? "Dog’s leash" :
+                run.ActorPosition.z > 2.24f ? "Latch" : "Blue gap";
+            Point(guide, marker, !overlay && marker != Vector3.zero);
+            Point(orchard, run.OrchardMarker, inFarm && !overlay);
+            Point(lane, run.LaneMarker, inFarm && !overlay);
+            Point(decoy, run.DecoyMarker, inFarm && !overlay && run.DecoyActive, false);
+            ShowKeeper(inFarm && !overlay);
+        }
+
+        void ShowOutcome()
+        {
+            if (run.IsPaused)
+            {
+                title.text = "Paused";
+                result.text = $"{run.Saved}/{run.Total} rescued   ·   {run.Caught} caught";
+                retry.text = "Resume";
+                menu.text = "Back to menu";
+                return;
+            }
+
+            title.text = run.Current == MarketEscapeRun.Phase.Lost ? "Mission failed" :
+                run.Saved == run.Total ? "Clean escape" : "Partial escape";
+            var ending = run.FinishedBy switch
+            {
+                MarketEscapeRun.Finish.Lockdown => "The yard locked down.",
+                MarketEscapeRun.Finish.TooManyCaught => "The keeper caught too many hens.",
+                MarketEscapeRun.Finish.Left when run.Current == MarketEscapeRun.Phase.Lost => "You left before enough hens got out.",
+                _ => ""
+            };
+            string tally = $"{run.Saved}/{run.Total} rescued   ·   {run.Caught} caught";
+            result.text = ending.Length > 0 ? $"{tally}\n{ending}" : tally;
+            retry.text = "Retry";
+            menu.text = "Close";
+        }
+
+        void ShowKeeper(bool shown)
+        {
+            var guard = run.Keeper;
+            keeper.text = guard.Current switch
+            {
+                EscapeKeeper.PatrolState.Investigating => "Heard a bark",
+                EscapeKeeper.PatrolState.Distracted => "Distracted",
+                EscapeKeeper.PatrolState.Pursuing => "Spotted",
+                EscapeKeeper.PatrolState.ClosingGate => "Closing gate",
+                EscapeKeeper.PatrolState.Windup => "About to grab!",
+                _ => ""
+            };
+            Point(keeper, guard.transform.position + Vector3.up * 1.9f, shown && keeper.text.Length > 0, false);
         }
 
         void Prompt(MarketEscapeRun.Phase phase)
         {
-            details.text = run.IsButterfly
-                ? phase == MarketEscapeRun.Phase.MeetDog ? "WASD fly   ·   Space rise   ·   Shift descend" :
-                  phase == MarketEscapeRun.Phase.Trust ? "" : "WASD fly   ·   Space rise   ·   Shift descend   ·   F swap"
-                : phase == MarketEscapeRun.Phase.FirstHen ? "WASD move   ·   Space call" :
-                  phase == MarketEscapeRun.Phase.Chase ? "WASD run   ·   Shift sprint   ·   Space bark   ·   F swap" :
-                  "WASD run   ·   Shift sprint";
-            if (!run.IsButterfly && phase == MarketEscapeRun.Phase.Chase)
-                details.text = run.CanGrabLaundry ? (run.Dragging ? "Q drop cloth" : "Q grab cloth") + "   ·   " + details.text :
-                    details.text + (run.BarkCharge < .99f ? "   ·   Bark recovering" : "");
-
+            details.text = phase switch
+            {
+                MarketEscapeRun.Phase.MeetDog => "WASD fly   ·   Space rise   ·   Shift descend",
+                MarketEscapeRun.Phase.Trust => "",
+                _ when run.IsButterfly => $"WASD fly   ·   Space rise   ·   Shift descend   ·   F swap   ·   {GustLabel()}",
+                _ => $"WASD move   ·   Shift sprint   ·   {BarkLabel()}   ·   F swap"
+            };
             (string control, string message) = phase switch
             {
-                MarketEscapeRun.Phase.MeetDog when run.CanUntieDog => ("E", "Loosen the knot to free the dog."),
-                MarketEscapeRun.Phase.MeetDog => ("WASD", "The keeper tied up the dog. Fly over to his leash."),
-                MarketEscapeRun.Phase.Trust when run.CanSwitchToAlly => ("F", "Switch to the dog. He’ll help you free the hens."),
+                MarketEscapeRun.Phase.MeetDog when run.CanUntieDog => ("E", "Loosen the knot."),
+                MarketEscapeRun.Phase.MeetDog => ("", "The keeper tied up the dog."),
                 MarketEscapeRun.Phase.Trust => ("", "He lowers his head and lets you land."),
-                MarketEscapeRun.Phase.FirstHen when run.Following > 0 => ("WASD", "Lead the hen through the orchard gap."),
-                MarketEscapeRun.Phase.FirstHen => ("SPACE", "Bark near the loose hen to call her to you."),
-                MarketEscapeRun.Phase.OpenPen when !run.IsButterfly => ("F", "Switch to the butterfly to get inside the pen."),
-                MarketEscapeRun.Phase.OpenPen when run.CanUseLatch => ("E", "Gust the latch to open the pen."),
-                MarketEscapeRun.Phase.OpenPen when run.ActorPosition.z > 2.24f => ("WASD", "Fly up to the latch."),
-                MarketEscapeRun.Phase.OpenPen => ("WASD", "Fly through the blue gap to reach the latch."),
-                MarketEscapeRun.Phase.BackToDog => ("F", "Switch back to the dog to call the flock."),
-                MarketEscapeRun.Phase.Chase when run.CanUseLatch => ("E", "Gust the latch to open the pen again."),
-                MarketEscapeRun.Phase.Chase when run.GateNeedsOpening && !run.IsButterfly => ("F", "The keeper shut the gate. Fly in and reopen it."),
-                MarketEscapeRun.Phase.Chase when run.GateNeedsOpening => ("WASD", "Go inside the pen to reach the latch."),
-                MarketEscapeRun.Phase.Chase when run.IsButterfly => ("F", "Switch back to the dog to move the flock."),
-                MarketEscapeRun.Phase.Chase when run.KeeperClosing && run.Following > 0 => ("SPACE", "Bark to distract the keeper, then lead the flock out."),
-                MarketEscapeRun.Phase.Chase when run.DogStopped => ("", "The keeper cut you off. Slip around her."),
-                MarketEscapeRun.Phase.Chase when run.JustRescued => ("", "Chicken safe."),
-                MarketEscapeRun.Phase.Chase when run.Dragging => ("Q", "Drop the cloth in the keeper’s path to make her go around."),
-                MarketEscapeRun.Phase.Chase when run.CanGrabLaundry => ("Q", "Drag the cloth to set up a detour for the keeper."),
-                MarketEscapeRun.Phase.Chase when run.Following > 0 => ("WASD", "Lead the flock through either marked exit."),
-                MarketEscapeRun.Phase.Chase => ("SPACE", "Bark near the pen to call the hens. Then lead them to an exit."),
+                MarketEscapeRun.Phase.Farm when run.CanLeave => ("E", $"Leave with {run.Saved} rescued"),
+                MarketEscapeRun.Phase.Farm when run.CanUseLatch => ("E", "Unlatch gate"),
+                MarketEscapeRun.Phase.Farm when run.JustCaught => ("", "The keeper caught a hen."),
+                MarketEscapeRun.Phase.Farm when !run.IsButterfly && run.DogStopped => ("", "The keeper snagged the dog."),
+                MarketEscapeRun.Phase.Farm when !run.IsButterfly && run.Dragging => ("Q", "Drop cloth"),
+                MarketEscapeRun.Phase.Farm when !run.IsButterfly && run.CanGrabLaundry => ("Q", "Drag cloth"),
                 _ => ("", "")
             };
             key.text = control;
-            Toggle(key, control.Length != 0);
             hint.text = message;
+            Toggle(key, control.Length > 0);
+            Toggle(promptLine, message.Length > 0);
         }
 
-        void Point(Label element, Vector3 point, bool shown)
+        string GustLabel() => run.GustRemaining <= 0f ? "E gust decoy" : $"Decoy {Mathf.CeilToInt(run.GustRemaining)}s";
+        string BarkLabel() => run.BarkCharge >= .99f ? "Space rally" : "Bark recovering";
+
+        void Point(Label element, Vector3 point, bool shown, bool clamp = true)
         {
-            Toggle(element, shown);
-            if (!shown || root.layout.width <= 1 || root.layout.height <= 1) return;
+            if (!shown || root.layout.width <= 1f || root.layout.height <= 1f)
+            {
+                Toggle(element, false);
+                return;
+            }
             var anchor = view.WorldToViewportPoint(point);
+            if (!clamp && (anchor.z <= 0f || anchor.x is < .06f or > .94f || anchor.y is < .12f or > .91f))
+            {
+                Toggle(element, false);
+                return;
+            }
+            Toggle(element, true);
             float width = root.layout.width, height = root.layout.height;
             float x = anchor.z < 0f ? 1f - anchor.x : anchor.x;
             float y = anchor.z < 0f ? anchor.y : 1f - anchor.y;

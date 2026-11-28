@@ -8,6 +8,7 @@ namespace Amusnet.ChickenEscape
         [SerializeField] MarketEscapeRun run;
         Camera output;
         Vector3 follow, ease;
+        float widen = .92f;
 
         void Start()
         {
@@ -26,7 +27,9 @@ namespace Amusnet.ChickenEscape
         void Frame()
         {
             Vector3 size = new(0f, 6.6f, -7.6f);
-            float widen = run.IsButterfly ? .92f : 1f;
+            bool inYard = run.Current is MarketEscapeRun.Phase.Farm or MarketEscapeRun.Phase.Won or MarketEscapeRun.Phase.Lost;
+            float target = inYard ? 1.13f : .92f;
+            widen = Mathf.Lerp(widen, target, 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime));
             Vector3 anchor = new(follow.x, Mathf.Clamp(follow.y * .44f, .05f, 1.9f), follow.z);
             transform.position = anchor + size * widen;
             transform.LookAt(anchor + Vector3.forward * .75f);
