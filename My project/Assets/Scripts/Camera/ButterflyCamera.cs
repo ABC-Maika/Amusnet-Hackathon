@@ -41,6 +41,10 @@ public sealed class ButterflyCamera : CinemachineExtension
         if (!Application.isPlaying || !Application.isFocused)
             return;
 
+        // The pause menu owns the cursor while open (clicks there must not recapture it).
+        if (Butterfly.UI.PauseMenu.IsPaused)
+            return;
+
         var mouse = Mouse.current;
         if (Keyboard.current?.escapeKey.wasPressedThisFrame == true)
         {
