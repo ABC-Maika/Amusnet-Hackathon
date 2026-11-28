@@ -201,13 +201,18 @@ namespace Butterfly.Death
             // The flight controller moves with a CharacterController, which a Rigidbody can't collide with:
             // swap it for a small sphere so the fall can land.
             var cc = butterfly.GetComponent<CharacterController>();
-            if (cc != null && cc.enabled)
+            var sphere = butterfly.GetComponent<SphereCollider>();
+            if (!sphere)
+                sphere = butterfly.AddComponent<SphereCollider>();
+
+            sphere.enabled = true;
+            sphere.isTrigger = false;
+
+            if (cc)
             {
                 cc.enabled = false;
-                var sphere = butterfly.GetComponent<SphereCollider>();
-                if (sphere == null) sphere = butterfly.AddComponent<SphereCollider>();
                 sphere.center = cc.center;
-                sphere.radius = Mathf.Max(0.05f, cc.radius * 0.6f);
+                sphere.radius = Mathf.Max(0.05f, cc.radius);
             }
 
             // Go limp: wings stop, the body tips over.
@@ -224,7 +229,8 @@ namespace Butterfly.Death
 
             var landing = butterfly.GetComponent<LandingDetector>();
             if (landing == null) landing = butterfly.AddComponent<LandingDetector>();
-            landing.Init(groundMask);
+            var flight = butterfly.GetComponent<ButterflyController>();
+            landing.Init(groundMask, rb, sphere, flight?.LastTerrainPosition);
 
             if (cam) cam.Follow(butterfly.transform, 2.2f, 1.2f);
             for (float t = 0f; t < maxFallTime && !landing.Landed; t += Time.deltaTime) yield return null;

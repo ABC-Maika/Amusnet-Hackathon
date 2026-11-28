@@ -22565,7 +22565,6 @@ MonoBehaviour:
   telegraphTime: 0.8
   warningTime: 1.4
   launchVelocity: {x: 0, y: 0.3, z: 0}
-  legacyMultiplier: 1.2
   chainPowerMultiplier: 1
   warnRadius: 5.5
   strikeRadius: 2.8
@@ -31007,7 +31006,6 @@ MonoBehaviour:
   telegraphTime: 0.6
   warningTime: 1.5
   launchVelocity: {x: 0, y: 1.5, z: 0}
-  legacyMultiplier: 1
   chainPowerMultiplier: 1
   warnRadius: 6
   strikeRadius: 3
@@ -31737,7 +31735,6 @@ MonoBehaviour:
   telegraphTime: 0.6
   warningTime: 1.2
   launchVelocity: {x: 0, y: -3, z: 0}
-  legacyMultiplier: 1.15
   chainPowerMultiplier: 1
   warnRadius: 4.5
   strikeRadius: 2.2
@@ -49483,7 +49480,6 @@ MonoBehaviour:
   telegraphTime: 0.7
   warningTime: 1.6
   launchVelocity: {x: 0, y: 1.5, z: 0}
-  legacyMultiplier: 1.25
   chainPowerMultiplier: 1
   warnRadius: 6
   strikeRadius: 3
@@ -50011,7 +50007,6 @@ MonoBehaviour:
   telegraphTime: 1
   warningTime: 1.5
   launchVelocity: {x: 0, y: 0.5, z: 0}
-  legacyMultiplier: 1.1
   chainPowerMultiplier: 1
   warnRadius: 5
   strikeRadius: 2.6
@@ -50060,26 +50055,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78c526e62412ddd40a24bf7549a4ad3e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Butterfly.Death.DeathManager
-  slowMoScale: 0.15
-  slowMoEaseIn: 0.15
-  steerDuration: 3
-  returnToNormalTime: 0.6
+  digestSeconds: {x: 3, y: 5}
+  swallowSeconds: 0.35
   maxFallTime: 8
-  fallGravityScale: 0.6
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
   chainRadius: 12
   chainPower: 1
-  baseLegacy: 10
-  legacyPerMessValue: 1
   blastImpulse: 6
   endDelay: 1.5
   disableOnDeath: []
   onDeathStarted:
-    m_PersistentCalls:
-      m_Calls: []
-  onLegacyAwarded:
     m_PersistentCalls:
       m_Calls: []
   onDeathFinished:
@@ -61959,7 +61946,7 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 0.75, z: -2.1}
+  FollowOffset: {x: 0, y: 1.8, z: -4.8}
 --- !u!4 &1445940230
 Transform:
   m_ObjectHideFlags: 0
