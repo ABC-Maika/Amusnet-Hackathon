@@ -10,8 +10,8 @@ namespace Butterfly.Death
     /// Stage 1 (landOnFlowerAt): "land on a flower or the predator will kill you".
     /// Stage 2 (hideAt): "hide! the predator arrives in N seconds" - a countdown starts. Hiding cancels it.
     /// Countdown reaching 0, or the meter hitting 100, sends the bird: DeathManager.Die(BirdDeath).
-    /// NOTE: Sprint 5 [A] (Yavkata) also covers the predator system. Keep ONE of them: this class exposes
-    /// Percent/Stage/CountdownLeft so either can drive the HUD.
+    /// When this is in the scene it owns the threat: Yavkata's PredatorSystem stops ticking and only
+    /// mirrors Percent to GameHUD. Without it, PredatorSystem runs alone and still kills via DeathManager.
     /// </summary>
     public class PredatorMeter : MonoBehaviour
     {
@@ -64,6 +64,8 @@ namespace Butterfly.Death
         {
             if (sent) return;
             if (DeathManager.Instance != null && DeathManager.Instance.IsDying) return;
+            // Freeze on the menu, while paused and after win/lose.
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) { hasLast = false; return; }
             if (!Resolve()) return;
 
             float dt = Time.deltaTime;
@@ -73,6 +75,7 @@ namespace Butterfly.Death
 
             IsHidden = (shelter != null && shelter.IsHidden)
                        || ProximityKiller.ButterflyHidden
+                       || HidingZone.IsHidden(butterfly.position)
                        || (holdHToHide && Keyboard.current != null && Keyboard.current.hKey.isPressed);
             IsFlying = speed > flyingSpeed;
 

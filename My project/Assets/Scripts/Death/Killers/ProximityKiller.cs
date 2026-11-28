@@ -65,16 +65,33 @@ namespace Butterfly.Death
         /// <summary>Seconds the player still has to get away.</summary>
         public float ChargeSecondsLeft => (warningTime + telegraphTime) * (1f - ChargeProgress);
 
+        [Header("Control")]
+        [Tooltip("Off = never hunts on its own; another script (a villager) calls DeathManager.Die with it.")]
+        public bool autoHunt = true;
+
+        void Awake()
+        {
+            if (displayName == "Unknown") ApplyDefaults(); // added at runtime: Reset() never ran
+            OnAwake();
+        }
+
         void Start()
         {
-            if (showWarningBar) KillerWarningBar.Create(this, warningBarOffset, warningBarWidth);
+            if (showWarningBar && autoHunt) KillerWarningBar.Create(this, warningBarOffset, warningBarWidth);
         }
         Amusnet.World.ShelterState shelter;
 
-        void Reset() { displayName = "Killer"; }
+        void Reset() => ApplyDefaults();
+
+        /// <summary>Default tunables for this killer. Used by Reset() and by AddComponent at runtime.</summary>
+        protected virtual void ApplyDefaults() { displayName = "Killer"; }
+
+        /// <summary>Subclasses build their visuals here (Awake is owned by the base).</summary>
+        protected virtual void OnAwake() { }
 
         void Update()
         {
+            if (!autoHunt) return;
             if (DeathManager.Instance != null && DeathManager.Instance.IsDying) return;
             if (!ResolveButterfly()) return;
 

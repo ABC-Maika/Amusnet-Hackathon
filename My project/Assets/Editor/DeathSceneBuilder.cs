@@ -151,5 +151,55 @@ public static class DeathSceneBuilder
         return frog;
     }
 
+    [MenuItem("Death/Add Spider, Swatter, Net and Zapper Killers")]
+    static void AddKillers()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        foreach (var r in scene.GetRootGameObjects())
+            if (r.name == "Killers")
+            {
+                Debug.LogWarning("[Death] Scene already has a 'Killers' group, nothing added.");
+                Selection.activeGameObject = r;
+                return;
+            }
+
+        // Around the butterfly's start so they are easy to find in a play-test.
+        var b = ButterflyLocator.Find();
+        Vector3 c = b ? new Vector3(b.position.x, 0f, b.position.z) : Vector3.zero;
+
+        var root = new GameObject("Killers");
+        Undo.RegisterCreatedObjectUndo(root, "Add killers");
+        Place<SpiderDeath>(root, "Spider Web", c + new Vector3(12f, 0f, 6f), 2.5f);
+        Place<SwatterDeath>(root, "Swatter", c + new Vector3(-12f, 0f, 6f), 0f);
+        Place<NetDeath>(root, "Butterfly Net", c + new Vector3(6f, 0f, -12f), 0f);
+        Place<ZapperLampDeath>(root, "Zapper Lamp", c + new Vector3(-8f, 0f, -12f), 0f);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Selection.activeGameObject = root;
+        Debug.Log("[Death] Added the spider, swatter, net and zapper lamp (art is built on Play). The zapper only hunts at night.");
+    }
+
+    static void Place<T>(GameObject parent, string name, Vector3 pos, float heightAboveGround) where T : ProximityKiller
+    {
+        pos.y = GroundY(pos) + heightAboveGround;
+        var go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+        go.transform.position = pos;
+        Undo.AddComponent<T>(go); // Reset() applies the killer's defaults
+    }
+
+    static float GroundY(Vector3 p)
+    {
+        foreach (var t in Terrain.activeTerrains)
+        {
+            var local = p - t.transform.position;
+            var size = t.terrainData.size;
+            if (local.x < 0 || local.z < 0 || local.x > size.x || local.z > size.z) continue;
+            return t.SampleHeight(p) + t.transform.position.y;
+        }
+        return Physics.Raycast(p + Vector3.up * 200f, Vector3.down, out var hit, 400f) ? hit.point.y : 0f;
+    }
+
     static float R(System.Random r, float a, float b) => a + (float)r.NextDouble() * (b - a);
 }
