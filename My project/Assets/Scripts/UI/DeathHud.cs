@@ -250,7 +250,9 @@ namespace Butterfly.UI
 
             if (gameplayGroup)
             {
-                float target = PauseMenu.IsPaused ? 0f : dying ? 0.12f : 1f;
+                // Hidden on the menu, during the win cinematic and on the end screens, like GameHUD.
+                bool offPlay = GameFlow.Instance != null && !GameFlow.Instance.IsRunning;
+                float target = PauseMenu.IsPaused || offPlay ? 0f : dying ? 0.12f : 1f;
                 gameplayGroup.alpha = Mathf.MoveTowards(gameplayGroup.alpha, target, 4f * uiDt);
             }
         }

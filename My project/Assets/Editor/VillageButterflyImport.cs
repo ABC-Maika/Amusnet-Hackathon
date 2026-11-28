@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 // Moves the playable butterfly rig (player, follow camera, brain camera) from ButterflyPreview into Village.
 public static class VillageButterflyImport
 {
-    const string PreviewPath = "Assets/Scenes/ButterflyPreview.unity";
+    const string PreviewPath = "Assets/Scenes/Old_Scenes/ButterflyPreview.unity";
     static readonly string[] Rig = { "Butterfly Player", "Butterfly Follow Camera", "Preview Camera" };
 
     [MenuItem("Tools/Village/Import Butterfly Rig")]

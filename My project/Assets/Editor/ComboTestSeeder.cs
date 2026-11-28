@@ -13,8 +13,8 @@ using Object = UnityEngine.Object;
 
 public static class ComboTestSeeder
 {
-    private const string Source = "Assets/Scenes/Sprint3Village.unity";
-    private const string Destination = "Assets/Scenes/Sprint3ComboTests.unity";
+    private const string Source = "Assets/Scenes/Old_Scenes/Sprint3Village.unity";
+    private const string Destination = "Assets/Scenes/Old_Scenes/Sprint3ComboTests.unity";
     private const string GroundData = "Assets/Scenes/Combo Test Ground.asset";
 
     private sealed class Recipe
