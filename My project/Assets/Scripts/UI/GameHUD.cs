@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 /// <summary>
 /// Drives GameUI.uxml: HUD (mess bar + predator meter), pause, settings, win and game-over screens.
 /// Lives on the GameUI prefab next to its UIDocument, GameFlow and MainMenu; drop the prefab into the game scene.
-/// Other systems feed it with GameHUD.Instance.SetMess / SetPredator.
+/// Other systems feed it with GameHUD.Instance.SetMess / SetPredator / SetMultiplier / SetCover / Toast.
 /// </summary>
 [RequireComponent(typeof(UIDocument), typeof(GameFlow))]
 public class GameHUD : MonoBehaviour
@@ -20,9 +20,12 @@ public class GameHUD : MonoBehaviour
     GameFlow flow;
     SettingsPanel settings;
     VisualElement hud, pauseScreen, settingsScreen, winScreen, loseScreen, fade, messFill;
-    Label messValue, predatorValue;
+    Label messValue, predatorValue, messMultiplier, coverStatus, toast;
     RadialMeter predatorMeter;
-    float mess;
+    float mess, multiplier = 1f, predator, safeUntil, toastUntil;
+    bool wasHidden, chasedWhileHidden;
+    string coverKind = "", coverText;
+    static readonly string[] CoverKinds = { "hidden", "boost", "safe" };
     bool leaving;
     Action afterSettings;
 
@@ -40,10 +43,60 @@ public class GameHUD : MonoBehaviour
         messValue.text = $"{Mathf.RoundToInt(normalized * 100f)}%";
     }
 
+    /// <param name="value">Points multiplier of each new mess; the tag is hidden at x1.</param>
+    public void SetMultiplier(float value)
+    {
+        if (Mathf.Approximately(value, multiplier)) return;
+        if (value > multiplier) UIAnim.Bump(messMultiplier, "mess-mult--bump");
+        multiplier = value;
+        messMultiplier.text = $"×{value:0.##}";
+        messMultiplier.EnableInClassList("mess-mult--off", value <= 1.001f);
+    }
+
+    /// <summary>Cover pill under the predator ring: Hidden, Speed boost, or Safe once the predator gives up.</summary>
+    public void SetCover(bool hidden, float boostSecondsLeft)
+    {
+        // "Safe": the predator was after you when you hid, and has now lost you.
+        if (hidden && !wasHidden) chasedWhileHidden = predator > 5f;
+        if (hidden && chasedWhileHidden && predator <= 0.5f) { chasedWhileHidden = false; safeUntil = Time.unscaledTime + 2.5f; }
+        if (!hidden) safeUntil = 0f;
+        wasHidden = hidden;
+
+        string kind = null, text = null;
+        if (Time.unscaledTime < safeUntil) { kind = "safe"; text = "Safe: the predator lost you"; }
+        else if (hidden) { kind = "hidden"; text = "Hidden"; }
+        else if (boostSecondsLeft > 0f) { kind = "boost"; text = BoostText(Mathf.CeilToInt(boostSecondsLeft)); }
+
+        // Called every frame: only touch the UI when something changed.
+        if (kind != coverKind)
+        {
+            coverKind = kind;
+            coverStatus.EnableInClassList("cover-status--off", kind == null);
+            foreach (var k in CoverKinds) coverStatus.EnableInClassList("cover-status--" + k, k == kind);
+        }
+        if (text != null && !ReferenceEquals(text, coverText)) coverStatus.text = coverText = text;
+    }
+
+    static readonly string[] boostTexts = new string[16];
+    static string BoostText(int seconds)
+    {
+        seconds = Mathf.Clamp(seconds, 0, boostTexts.Length - 1);
+        return boostTexts[seconds] ??= $"Speed boost {seconds}s";
+    }
+
+    /// <summary>Shows a short message above the bottom of the screen.</summary>
+    public void Toast(string text, float seconds = 3f)
+    {
+        toast.text = text;
+        toast.RemoveFromClassList("hud-toast--off");
+        toastUntil = Time.unscaledTime + seconds;
+    }
+
     /// <param name="percent">Predator percentage, 0..100.</param>
     public void SetPredator(float percent)
     {
         percent = Mathf.Clamp(percent, 0f, 100f);
+        predator = percent;
         predatorMeter.Value = percent / 100f;
         predatorValue.text = $"{Mathf.RoundToInt(percent)}%";
         predatorMeter.EnableInClassList("predator-meter--danger", percent >= predatorDangerAt);
@@ -73,6 +126,9 @@ public class GameHUD : MonoBehaviour
         messValue = root.Q<Label>("messValue");
         predatorValue = root.Q<Label>("predatorValue");
         predatorMeter = root.Q<RadialMeter>("predatorMeter");
+        messMultiplier = root.Q<Label>("messMultiplier");
+        coverStatus = root.Q<Label>("coverStatus");
+        toast = root.Q<Label>("toast");
 
         settings = new SettingsPanel(settingsScreen);
         settings.BackClicked += CloseSettings;
@@ -110,6 +166,7 @@ public class GameHUD : MonoBehaviour
     {
         // Hidden on the menu and while the win cinematic plays (WinPending has no event, so check each frame).
         hud.EnableInClassList("hud--off", flow.Current == GameFlow.State.Menu || flow.WinPending);
+        if (toastUntil > 0f && Time.unscaledTime > toastUntil) { toastUntil = 0f; toast.AddToClassList("hud-toast--off"); }
 
         if (leaving || Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
         if (settingsScreen.ClassListContains("is-shown")) settings.Back();

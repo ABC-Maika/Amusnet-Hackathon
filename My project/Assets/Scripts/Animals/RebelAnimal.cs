@@ -18,6 +18,11 @@ namespace Butterfly.Animals
 
         public static readonly List<RebelAnimal> Allies = new List<RebelAnimal>();
 
+        // Enter Play Mode without a domain reload keeps statics.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() { Allies.Clear(); AllyMess = null; Recruited = null; }
+
+
         [Header("Recruiting")]
         public string animalName = "Animal";
         public float recruitRadius = 4f;
@@ -74,6 +79,7 @@ namespace Butterfly.Animals
 
         void Update()
         {
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) return;
             if (!IsAlly) UpdateRecruit(); else UpdateAlly();
         }
 
@@ -115,6 +121,8 @@ namespace Butterfly.Animals
 
         void UpdateAlly()
         {
+            // The target is an interface: a destroyed prop doesn't compare equal to null by itself.
+            if (goalTarget is UnityEngine.Object gone && !gone) goalTarget = null;
             if (goalTarget == null)
             {
                 if (Time.time < nextMessTime) return;
@@ -134,8 +142,7 @@ namespace Butterfly.Animals
 
             Vector3 step = flat.normalized * walkSpeed * Time.deltaTime;
             Vector3 pos = transform.position + step;
-            if (Physics.Raycast(pos + Vector3.up * 20f, Vector3.down, out var hit, 60f))
-                pos.y = hit.point.y + 0.5f;
+            pos.y = WinWalker.GroundY(pos, pos.y - 0.5f) + 0.5f; // terrain height: not roofs, canopies or itself
             transform.position = pos;
             if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat);
         }
@@ -162,7 +169,7 @@ namespace Butterfly.Animals
 
         void OnGUI()
         {
-            if (IsAlly || !PlayerNear()) return;
+            if (IsAlly || (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) || !PlayerNear()) return;
             var cam = Camera.main;
             if (cam == null) return;
             Vector3 sp = cam.WorldToScreenPoint(transform.position + Vector3.up * 1.5f);

@@ -26,6 +26,7 @@ namespace Amusnet.Animals
         private float nextDeparture;
         private float gait;
         private bool returning;
+        private static readonly int SpeedParam = Animator.StringToHash("Speed");
 
         private void Awake()
         {
@@ -55,7 +56,7 @@ namespace Amusnet.Animals
 
         private void React(Interactable source, int amount)
         {
-            if (!agent.isOnNavMesh || IsAlarmed) return;
+            if (!agent.isOnNavMesh || IsAlarmed || !source) return;
             Vector3 away = Vector3.ProjectOnPlane(transform.position - source.transform.position, Vector3.up);
             if (away.sqrMagnitude > 42f || away.sqrMagnitude < .01f) return;
             if (!NavMesh.SamplePosition(transform.position + away.normalized * 4f, out var escape, 2f, agent.areaMask))
@@ -89,7 +90,7 @@ namespace Amusnet.Animals
             if (animator)
             {
                 float blend = IsAlarmed ? Mathf.Lerp(walking, 2f, Mathf.Clamp01(speed / panicSpeed)) : walking;
-                animator.SetFloat("Speed", blend, .12f, Time.deltaTime);
+                animator.SetFloat(SpeedParam, blend, .12f, Time.deltaTime);
                 return;
             }
             float swing = walking * (IsAlarmed ? 36f : 24f);

@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public sealed class ButterflyPollen : MonoBehaviour
 {
     private ParticleSystem trail;
-    private bool emitting;
+    public bool IsEmitting { get; private set; }
 
     private void Awake()
     {
@@ -29,10 +29,10 @@ public sealed class ButterflyPollen : MonoBehaviour
 
     private void SetEmitting(bool held)
     {
-        if (emitting == held)
+        if (IsEmitting == held)
             return;
 
-        emitting = held;
+        IsEmitting = held;
         var emission = trail.emission;
         emission.enabled = held;
         if (held)

@@ -340,7 +340,7 @@ namespace Amusnet.World
                 Panel(new Rect(16, 88, width, 29), ink);
                 GUI.Label(new Rect(26, 92, width, 24), note, noteStyle);
             }
-            if (flow && PredatorSystem.Instance is { } predator &&
+            if (flow && global::Butterfly.Death.PredatorMeter.Instance is { } predator &&
                 (predator.IsHidden || predator.Percent >= 55f))
             {
                 string cover = predator.IsHidden ? "In cover · Predator pressure falling" : "Take cover beneath a large flower";

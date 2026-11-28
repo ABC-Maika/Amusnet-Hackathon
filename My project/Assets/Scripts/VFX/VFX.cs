@@ -44,9 +44,6 @@ public static class VFX
     /// <summary>Attaches the pollen trail to the player. It emits only while the player moves.</summary>
     public static GameObject PollenTrail(Transform player) => Attach(Library?.pollenTrail, player);
 
-    /// <summary>Attaches the ghostly glow and trail to the spirit successor.</summary>
-    public static GameObject SpiritTrail(Transform spirit) => Attach(Library?.spiritTrail, spirit);
-
     static GameObject Spawn(GameObject prefab, Vector3 position)
     {
         if (prefab == null) return null;

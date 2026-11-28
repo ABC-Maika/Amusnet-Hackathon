@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Globalization;
 using UnityEngine;
 
 namespace Butterfly.Death
@@ -28,45 +26,10 @@ namespace Butterfly.Death
             PlayerPrefs.Save();
         }
 
-        // ---- where previous butterflies died (spirit trail guides the next run there) ----
-        const string PointsKey = "RebelDeathPoints";
-        const int MaxPoints = 8;
-
-        /// <summary>Oldest first.</summary>
-        public static List<Vector3> GetDeathPoints()
-        {
-            var list = new List<Vector3>();
-            string raw = PlayerPrefs.GetString(PointsKey, "");
-            if (string.IsNullOrEmpty(raw)) return list;
-            foreach (var entry in raw.Split(';'))
-            {
-                var p = entry.Split(',');
-                if (p.Length == 3
-                    && float.TryParse(p[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x)
-                    && float.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y)
-                    && float.TryParse(p[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
-                    list.Add(new Vector3(x, y, z));
-            }
-            return list;
-        }
-
-        public static void RecordDeathPoint(Vector3 point)
-        {
-            var list = GetDeathPoints();
-            list.Add(point);
-            while (list.Count > MaxPoints) list.RemoveAt(0);
-            var parts = new List<string>();
-            foreach (var v in list)
-                parts.Add(string.Format(CultureInfo.InvariantCulture, "{0},{1},{2}", v.x, v.y, v.z));
-            PlayerPrefs.SetString(PointsKey, string.Join(";", parts));
-            PlayerPrefs.Save();
-        }
-
         public static void Reset()
         {
             PlayerPrefs.DeleteKey(Key);
             PlayerPrefs.DeleteKey(DeathsKey);
-            PlayerPrefs.DeleteKey(PointsKey);
         }
     }
 }

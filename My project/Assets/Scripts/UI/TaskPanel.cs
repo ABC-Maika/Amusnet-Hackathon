@@ -62,6 +62,8 @@ namespace Butterfly.UI
 
         void Awake()
         {
+            // The map scene may carry its own copy for standalone testing: the game's panel stays the one.
+            if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
             if (rowTemplate) rowTemplate.SetActive(false);
             foreach (var d in startTasks) Add(d);
