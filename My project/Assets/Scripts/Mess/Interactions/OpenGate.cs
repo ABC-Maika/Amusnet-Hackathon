@@ -23,7 +23,7 @@ namespace Amusnet.Mess
                 yield return null;
             }
             leaf.localRotation = open;
-            if (next) next.TryInteract(manager);
+            if (next) next.TryInteract(manager, this);
         }
     }
 }

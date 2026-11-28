@@ -21,10 +21,14 @@ namespace Amusnet.NPC
         public Activity CurrentActivity { get; private set; }
         private NavMeshAgent agent;
         private ShelterState shelter;
+        private WingGust gust;
         private Camera view;
         private Vector3 target;
         private Vector3 modelPosition;
         private Quaternion modelRotation;
+        [SerializeField] private bool expressiveRig;
+        private float startledUntil, takeNoticeAfter;
+        private int motion;
         private float remaining;
         private float repathIn;
         private bool nextWork = true;
@@ -33,6 +37,7 @@ namespace Amusnet.NPC
         {
             agent = GetComponent<NavMeshAgent>();
             shelter = mess.GetComponent<ShelterState>();
+            gust = mess.GetComponent<WingGust>();
             view = Camera.main;
             modelPosition = animator.transform.localPosition;
             modelRotation = animator.transform.localRotation;
@@ -52,6 +57,11 @@ namespace Amusnet.NPC
         {
             if (!agent.isOnNavMesh || !source
                 || (source.transform.position - transform.position).sqrMagnitude > hearingRadius * hearingRadius) return;
+            if (expressiveRig && Time.time >= takeNoticeAfter)
+            {
+                startledUntil = Time.time + .86f;
+                takeNoticeAfter = Time.time + 4f;
+            }
             SetActivity(Activity.Investigating, 6f);
             if (!WalkTo(source.transform.position))
                 SetActivity(Activity.Complaining, 2.4f);
@@ -89,6 +99,16 @@ namespace Amusnet.NPC
                     }
                     break;
                 case Activity.Chasing:
+                    if (gust && CanSeeButterfly())
+                    {
+                        Vector3 offset = mess.transform.position - transform.position;
+                        if (offset.y < 1.95f && Vector3.ProjectOnPlane(offset, Vector3.up).sqrMagnitude < 1.3f)
+                        {
+                            gust.Shoo();
+                            SetActivity(Activity.Complaining, 2.4f);
+                            break;
+                        }
+                    }
                     if (remaining <= 0f || !CanSeeButterfly())
                     {
                         SetActivity(Activity.Complaining, 2.4f);
@@ -162,6 +182,25 @@ namespace Amusnet.NPC
         private void Animate()
         {
             float speed = agent.velocity.magnitude;
+            if (expressiveRig)
+            {
+                bool startled = Time.time < startledUntil;
+                string pose = startled ? "Startle" : CurrentActivity switch
+                {
+                    Activity.Working => "Sort goods",
+                    Activity.Complaining => "Protest",
+                    _ => speed > .15f ? "Walk" : "Watch"
+                };
+                int state = Animator.StringToHash("Base Layer." + pose);
+                if (state != motion)
+                {
+                    animator.CrossFadeInFixedTime(state, startled ? .07f : .16f);
+                    motion = state;
+                }
+                animator.speed = pose == "Walk" ? Mathf.Clamp(speed / 1.65f, .5f, 2f) : 1f;
+                if (view) bubble.transform.rotation = view.transform.rotation;
+                return;
+            }
             float stride = Mathf.Sin(Time.time * 5.5f);
             float playback = speed > .12f ? Mathf.Clamp(speed / 1.65f, .45f, 2.1f) : 0f;
             animator.speed = Mathf.MoveTowards(animator.speed, playback, 5f * Time.deltaTime);

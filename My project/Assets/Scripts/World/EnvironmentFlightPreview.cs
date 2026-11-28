@@ -26,6 +26,21 @@ namespace Amusnet.World
         readonly Collider[] nearby = new Collider[16];
         readonly Queue<(string label, int points, float expiresAt)> recentMess = new();
         Interactable[][] districtProps;
+        [SerializeField] private bool marketView;
+        private WingGust gust;
+        private int bestChain;
+        private readonly Dictionary<Transform, int> districtChains = new();
+        private Interactable lastImpact;
+        private float focusedUntil;
+        private Vector3 cameraBias;
+        private RollingCask rollingFocus;
+        private float crane;
+        private static string restartDistrict;
+        private Transform visitedDistrict;
+        private float clueUntil;
+        private readonly Queue<(Vector3 position, int points, float started)> impactLabels = new();
+        private bool launched;
+        private GUIStyle districtStyle, scoreStyle, noteStyle;
         bool showMap;
         Vector3 drift;
         void Awake()
@@ -33,9 +48,39 @@ namespace Amusnet.World
             mover = GetComponent<CharacterController>();
             shelter = GetComponent<ShelterState>();
             mess = GetComponent<MessManager>();
+            gust = GetComponent<WingGust>();
             districtProps = new Interactable[districts.Length][];
             for (int i = 0; i < districts.Length; i++)
                 districtProps[i] = districts[i] ? districts[i].GetComponentsInChildren<Interactable>() : Array.Empty<Interactable>();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ClearRestart() => restartDistrict = null;
+
+        private void Start()
+        {
+            if (!marketView || string.IsNullOrEmpty(restartDistrict)) return;
+            foreach (var district in districts)
+                if (district && district.name == restartDistrict) Visit(district);
+            restartDistrict = null;
+        }
+
+        private void Visit(Transform district)
+        {
+            var destination = district.GetComponent<MarketDistrict>();
+            if (!destination || !destination.approach) return;
+            mover.enabled = false;
+            transform.SetPositionAndRotation(destination.approach.position, destination.approach.rotation);
+            mover.enabled = true;
+            showMap = false;
+            if (gust) gust.ArriveAtDistrict();
+            launched = false;
+            lastImpact = null;
+            rollingFocus = null;
+            cameraBias = Vector3.zero;
+            crane = 0f;
+            impactLabels.Clear();
+            clueUntil = Time.time + 6f;
         }
 
         void OnEnable()
@@ -51,6 +96,22 @@ namespace Amusnet.World
 
         void ShowAward(Interactable source, int points)
         {
+            if (marketView)
+            {
+                if (impactLabels.Count >= 7) impactLabels.Dequeue();
+                impactLabels.Enqueue((source.transform.position + Vector3.up * 1.35f, points, Time.time));
+            }
+            lastImpact = source;
+            launched = true;
+            if (source is RollingCask cask) rollingFocus = cask;
+            bestChain = Mathf.Max(bestChain, source.ChainRoot.ChainLength);
+            var area = source.transform.parent;
+            if (marketView && area)
+            {
+                districtChains.TryGetValue(area, out int districtBest);
+                districtChains[area] = Mathf.Max(districtBest, source.ChainRoot.ChainLength);
+            }
+            focusedUntil = Time.time + 2.8f;
             if (recentMess.Count == 3) recentMess.Dequeue();
             recentMess.Enqueue((source.name, points, Time.unscaledTime + 4f));
         }
@@ -69,6 +130,7 @@ namespace Amusnet.World
                 showMap = !showMap;
             if (mess && k.rKey.wasPressedThisFrame)
             {
+                if (marketView) restartDistrict = ClosestDistrict()?.name;
                 SceneManager.LoadScene(gameObject.scene.path);
                 return;
             }
@@ -77,7 +139,8 @@ namespace Amusnet.World
             float rise = (k.spaceKey.isPressed ? 4f * weather.LiftMultiplier : 0f) - (k.leftShiftKey.isPressed ? 4f : 0f);
             if (mess && (x != 0f || z != 0f || rise != 0f))
                 mess.BeginRun();
-            drift = shelter.IsHidden ? Vector3.zero : wind.Sample(transform.position, Time.time);
+            launched |= x != 0 || z != 0 || rise != 0f;
+            drift = shelter.IsHidden || (marketView && !launched) ? Vector3.zero : wind.Sample(transform.position, Time.time);
             Vector3 velocity = Vector3.ClampMagnitude(new Vector3(x, 0, z), 1f) * horizontalSpeed + drift +
                 Vector3.up * (rise - (shelter.IsHidden ? 0f : weather.RainSink));
             Vector3 next = transform.position + velocity * Time.deltaTime;
@@ -92,8 +155,20 @@ namespace Amusnet.World
         void LateUpdate()
         {
             CheckInteractionVolumes();
-            view.transform.position = transform.position + new Vector3(0,4,-7);
-            view.transform.LookAt(transform.position + Vector3.forward * 1.8f);
+            Vector3 focus = transform.position;
+            if (marketView)
+            {
+                bool rolling = rollingFocus && rollingFocus.IsRolling &&
+                    (rollingFocus.Drum.position - focus).sqrMagnitude < 196f;
+                Vector3 subject = rolling ? rollingFocus.Drum.position :
+                    lastImpact && Time.time < focusedUntil ? lastImpact.transform.position : focus;
+                Vector3 bias = Vector3.ClampMagnitude(Vector3.ProjectOnPlane(subject - focus, Vector3.up) * .62f, 4.7f);
+                crane = Mathf.Lerp(crane, rolling ? 1f : 0f, 1f - Mathf.Exp(-3f * Time.deltaTime));
+                cameraBias = Vector3.Lerp(cameraBias, bias, 1f - Mathf.Exp(-3.3f * Time.deltaTime));
+                focus += cameraBias;
+            }
+            view.transform.position = focus + (marketView ? new Vector3(1.45f + crane * 3.15f, 3.15f + 3.35f * crane, -5.8f - crane * .55f) : new Vector3(0, 4f, -7f));
+            view.transform.LookAt(focus + Vector3.forward * 1.8f);
             view.backgroundColor = RenderSettings.fogColor;
         }
         void CheckInteractionVolumes()
@@ -116,6 +191,12 @@ namespace Amusnet.World
         }
         void OnGUI()
         {
+            if (marketView && mess)
+            {
+                DrawMarketHud();
+                if (showMap) DrawDistrictMap();
+                return;
+            }
             GUI.Box(new Rect(12,12,390,74), NearestDistrict());
             GUI.Label(new Rect(24,37,375,20),"WASD move     Space climb     Left Shift descend");
             GUI.Label(new Rect(24,58,375,20),$"{(shelter.IsHidden ? "Hidden" : "Exposed")}    {(weather.Daylight < .3f ? "Night" : "Day")}    Rain {weather.Rain:P0}    Wind {drift.magnitude:F1} m/s");
@@ -149,11 +230,91 @@ namespace Amusnet.World
             if (showMap) DrawDistrictMap();
         }
 
+        private static void Panel(Rect rect, Color color)
+        {
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = previous;
+        }
+
+        private void DrawMarketHud()
+        {
+            districtStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+            scoreStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold };
+            noteStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 13 };
+            Color ink = new Color(.12f, .16f, .15f, .94f);
+            Color wheat = new Color(.96f, .77f, .48f);
+            districtStyle.normal.textColor = wheat;
+            scoreStyle.normal.textColor = noteStyle.normal.textColor = new Color(.98f, .95f, .86f);
+            Panel(new Rect(16, 14, 220, 68), ink);
+            var district = ClosestDistrict();
+            if (district != visitedDistrict)
+            {
+                visitedDistrict = district;
+                clueUntil = Time.time + 6f;
+            }
+            GUI.Label(new Rect(27, 19, 198, 22), district ? district.name : "Village", districtStyle);
+            var time = TimeSpan.FromSeconds(mess.ElapsedSeconds);
+            GUI.Label(new Rect(26, 37, 140, 34), $"{mess.Score} / {mess.GoalScore}", scoreStyle);
+            GUI.Label(new Rect(179, 47, 54, 22), $"{(int)time.TotalMinutes}:{time.Seconds:00}", noteStyle);
+            Panel(new Rect(16, 79, 220f * Mathf.Clamp01((float)mess.Score / mess.GoalScore), 3), wheat);
+
+            string note = mess.HasReachedGoal ? "Village goal reached" : mess.Score == 0 ? openingHint : "";
+            if (district && (mess.Score == 0 || Time.time < clueUntil) && district.TryGetComponent<MarketDistrict>(out var market))
+                note = market.clue;
+            if (lastImpact && Time.time < focusedUntil)
+            {
+                int count = lastImpact.ChainRoot.ChainLength;
+                note = (count > 1 ? $"{count} in chain   ·   " : "") + lastImpact.name + $"   +{lastImpact.Points}";
+            }
+            if (note.Length > 0)
+            {
+                float width = noteStyle.CalcSize(new GUIContent(note)).x + 22;
+                Panel(new Rect(16, 88, width, 29), ink);
+                GUI.Label(new Rect(26, 92, width, 24), note, noteStyle);
+            }
+            while (impactLabels.Count > 0 && Time.time - impactLabels.Peek().started > 1.12f)
+                impactLabels.Dequeue();
+            foreach (var hit in impactLabels)
+            {
+                float age = Time.time - hit.started;
+                Vector3 screen = view.WorldToScreenPoint(hit.position + Vector3.up * age * .8f);
+                if (screen.z <= 0f) continue;
+                float y = Screen.height - screen.y;
+                Color previous = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01((1.12f - age) * 4f));
+                Panel(new Rect(screen.x - 14f, y, 30, 22), ink);
+                GUI.Label(new Rect(screen.x - 10, y, 28, 21), $"+{hit.points}", districtStyle);
+                GUI.color = previous;
+            }
+            if (gust)
+            {
+                string prompt = gust.Prompt;
+                float w = Mathf.Max(140f, districtStyle.CalcSize(new GUIContent(prompt)).x + 26f);
+                float x = Screen.width * .5f - w * .5f;
+                Panel(new Rect(x, Screen.height - 92f, w, 32f), ink);
+                GUI.Label(new Rect(x + 11, Screen.height - 87f, w, 23), prompt, districtStyle);
+                Panel(new Rect(x, Screen.height - 61f, w * gust.Charge, 2f), wheat);
+                if (bestChain >= 2)
+                {
+                    string record = bestChain >= 8 ? $"Market stunt   ★   {bestChain} in chain" : $"Best chain   {bestChain} / 8";
+                    float width = noteStyle.CalcSize(new GUIContent(record)).x + 20f;
+                    Panel(new Rect(Screen.width - width - 16, 14, width, 27), ink);
+                    GUI.Label(new Rect(Screen.width - width - 6, 18, width, 22), record, noteStyle);
+                }
+            }
+            const string controls = "WASD fly   ·   Space / Shift height   ·   Tab map   ·   R restart";
+            float line = noteStyle.CalcSize(new GUIContent(controls)).x + 20f;
+            Panel(new Rect(16, Screen.height - 40, line, 26), ink);
+            GUI.Label(new Rect(25, Screen.height - 37, line, 22), controls, noteStyle);
+        }
+
         private void DrawDistrictMap()
         {
             float size = Mathf.Min(Screen.width - 28f, Screen.height - 64f, 475f);
             var frame = new Rect(Screen.width - size - 14f, 16f, size, size);
-            GUI.Box(frame, "Village districts");
+            GUI.Box(frame, marketView ? "Choose a district to fly there" : "Village districts");
             var map = new Rect(frame.x + 56f, frame.y + 43f, size - 112f, size - 100f);
             for (int index = 0; index < districts.Length; index++)
             {
@@ -167,7 +328,13 @@ namespace Amusnet.World
                     total += item.Points;
                     if (item.HasInteracted) sum += item.Points;
                 }
-                GUI.Box(new Rect(point.x - 49f, point.y - 14f, 98f, 39f), $"{district.name}\n{sum} / {total}");
+                if (marketView)
+                {
+                    districtChains.TryGetValue(district, out int chain);
+                    if (GUI.Button(new Rect(point.x - 50f, point.y - 20f, 100f, 56f), $"{district.name}\n{sum} / {total}\nChain  {chain} / 8"))
+                        Visit(district);
+                }
+                else GUI.Box(new Rect(point.x - 49f, point.y - 14f, 98f, 39f), $"{district.name}\n{sum} / {total}");
             }
             var player = MapPosition(map, transform.position);
             Color original = GUI.color;
@@ -186,6 +353,12 @@ namespace Amusnet.World
 
         private string NearestDistrict()
         {
+            var district = ClosestDistrict();
+            return district ? district.name : "Village flight";
+        }
+
+        private Transform ClosestDistrict()
+        {
             Transform closest = null;
             float best = float.PositiveInfinity;
             foreach (var district in districts)
@@ -197,7 +370,7 @@ namespace Amusnet.World
                 closest = district;
                 best = distance;
             }
-            return closest ? closest.name : "Village flight";
+            return closest;
         }
     }
 }

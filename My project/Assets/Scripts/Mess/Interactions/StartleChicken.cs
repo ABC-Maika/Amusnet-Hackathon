@@ -102,7 +102,7 @@ namespace Amusnet.Mess
                 if (!reachedPot && distance >= impactDistance)
                 {
                     reachedPot = true;
-                    if (pot) pot.TryInteract(manager);
+                    if (pot) pot.TryInteract(manager, this);
                 }
                 yield return null;
             }
@@ -112,7 +112,7 @@ namespace Amusnet.Mess
             leftLeg.localRotation = rightLeg.localRotation = Quaternion.identity;
             leftWing.localRotation = rightWing.localRotation = Quaternion.identity;
             if (animator) animator.SetFloat("Speed", 0f);
-            if (!reachedPot && pot) pot.TryInteract(manager);
+            if (!reachedPot && pot) pot.TryInteract(manager, this);
         }
 
         private Vector3 Grounded(Vector3 position)

@@ -8,14 +8,16 @@ namespace Amusnet.Mess
         [SerializeField] private Transform ceramic;
         [SerializeField, Min(0.01f)] private float baseRadius = 0.19f;
 
+        [SerializeField] private LooseHay bale;
+
         private void OnTriggerEnter(Collider other) => TryInteractWith(other);
 
         protected override void OnInteracted(MessManager manager)
         {
-            StartCoroutine(Topple());
+            StartCoroutine(Topple(manager));
         }
 
-        private IEnumerator Topple()
+        private IEnumerator Topple(MessManager manager)
         {
             const float duration = 0.81f;
             Vector3 hinge = Vector3.right * baseRadius;
@@ -30,6 +32,7 @@ namespace Amusnet.Mess
                 yield return null;
             }
             SetAngle(84f, hinge);
+            if (bale) bale.TryInteract(manager, this);
         }
 
         private void SetAngle(float degrees, Vector3 hinge)

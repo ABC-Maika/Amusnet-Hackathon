@@ -51,7 +51,7 @@ namespace Amusnet.Mess
                 laundry[i].localPosition = new Vector3(starts[i].x + (i - 1) * .2f, 0.065f, starts[i].z + .42f);
                 laundry[i].localRotation = rotations[i] * Quaternion.Euler(90f, 0f, 0f);
             }
-            if (next) next.TryInteract(manager);
+            if (next) next.TryInteract(manager, this);
         }
     }
 }
