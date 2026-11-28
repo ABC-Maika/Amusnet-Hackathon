@@ -226,7 +226,8 @@ namespace Amusnet.World
                 }
             }
 
-            if (patrolPoints.Length > 0 && WalkTo(patrolPoints[patrolIndex].position))
+            if (patrolPoints != null && patrolPoints.Length > 0 && patrolPoints[patrolIndex]
+                && WalkTo(patrolPoints[patrolIndex].position))
                 patrolIndex = (patrolIndex + 1) % patrolPoints.Length;
         }
         private void CatchPollen()
