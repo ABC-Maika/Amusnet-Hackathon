@@ -47,8 +47,7 @@ namespace Amusnet.ChickenEscape
 
             Vector3 position = player.transform.position;
             bool nearDog = preparedRun.WithinDogReach(position);
-            bool nearEntrance = (position - entrance.position).sqrMagnitude <= EntryRange * EntryRange ||
-                (position - transform.position).sqrMagnitude <= EntryRange * EntryRange;
+            bool nearEntrance = (position - entrance.position).sqrMagnitude <= EntryRange * EntryRange;
             ShowPrompt(nearDog ? "E  ·  Untie the dog" : nearEntrance ? "E  ·  Start Chicken Escape" : "");
             if ((nearDog || nearEntrance) && Keyboard.current?.eKey.wasPressedThisFrame == true)
                 Enter(game, nearDog ? position : null);
@@ -76,7 +75,8 @@ namespace Amusnet.ChickenEscape
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Time.timeScale = 1f;
-            StartAttempt(false, untieFrom);
+            entrance.gameObject.SetActive(false);
+            StartAttempt(false, untieFrom ?? entrance.position, untieFrom.HasValue);
         }
 
         internal void Retry(MarketEscapeRun run, bool skipBond)
@@ -85,7 +85,7 @@ namespace Amusnet.ChickenEscape
             RememberCompletion(run);
             ReplaceYard();
             Time.timeScale = 1f;
-            StartAttempt(skipBond);
+            StartAttempt(skipBond, skipBond ? null : entrance.position);
         }
 
         internal void Leave(MarketEscapeRun run)
@@ -103,10 +103,10 @@ namespace Amusnet.ChickenEscape
                 completedThisVisit = Mathf.Max(completedThisVisit, run.Saved);
         }
 
-        void StartAttempt(bool skipBond, Vector3? untieFrom = null)
+        void StartAttempt(bool skipBond, Vector3? spawnPoint, bool untieDog = false)
         {
             session = preparedRun;
-            session.AttachToVillage(this, skipBond, untieFrom);
+            session.AttachToVillage(this, skipBond, spawnPoint, untieDog);
             session.gameObject.SetActive(true);
         }
 
@@ -129,6 +129,7 @@ namespace Amusnet.ChickenEscape
             if (flow) flow.EndActivity(this);
             Cursor.lockState = cursorLock;
             Cursor.visible = cursorWasVisible;
+            entrance.gameObject.SetActive(true);
             nextEntry = Time.unscaledTime + .55f;
         }
 

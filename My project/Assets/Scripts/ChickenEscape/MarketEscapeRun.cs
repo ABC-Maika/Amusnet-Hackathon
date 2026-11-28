@@ -88,16 +88,16 @@ namespace Amusnet.ChickenEscape
                 offset.x * offset.x + offset.z * offset.z <= UntieRange * UntieRange;
         }
 
-        internal void AttachToVillage(VillageChickenEscape owner, bool skipBond, Vector3? untieFrom)
+        internal void AttachToVillage(VillageChickenEscape owner, bool skipBond, Vector3? spawnPoint, bool untieDog)
         {
             village = owner;
             skipHostedBond = skipBond;
             hostedStartFrame = Time.frameCount;
-            if (untieFrom is not Vector3 visitor) return;
+            if (spawnPoint is not Vector3 visitor) return;
 
-            visitor.y = Mathf.Clamp(visitor.y, dog.Collar.y + .18f, YardHeight + 3.65f);
+            if (untieDog) visitor.y = Mathf.Clamp(visitor.y, dog.Collar.y + .18f, YardHeight + 3.65f);
             butterfly.transform.position = visitor;
-            untieOnStart = true;
+            untieOnStart = untieDog;
         }
 
         void Awake()

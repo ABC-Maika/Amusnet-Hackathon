@@ -6,7 +6,9 @@ namespace Amusnet.ChickenEscape
     [RequireComponent(typeof(EscapeKeeper))]
     public sealed class EscapePatrolSight : MonoBehaviour
     {
-        const int Segments = 24;
+        const int ConeSegments = 80;
+        const int StrikeSegments = 24;
+        static readonly Vector3 Lift = Vector3.up * .075f;
         static readonly int Tint = Shader.PropertyToID("_Color");
         static readonly Color PatrolColor = new(.76f, .39f, .11f, .22f);
         static readonly Color ChaseColor = new(.91f, .20f, .10f, .29f);
@@ -19,24 +21,31 @@ namespace Amusnet.ChickenEscape
         Mesh cone, strike;
         MeshRenderer coneRenderer, strikeRenderer;
         MaterialPropertyBlock appearance;
-        readonly Vector3[] conePoints = new Vector3[Segments + 2];
-        float nextScan;
+        readonly Vector3[] conePoints = new Vector3[2 * ConeSegments + 1];
+        readonly Vector3[] coneDirections = new Vector3[ConeSegments + 1];
 
         void Awake()
         {
             keeper = GetComponent<EscapeKeeper>();
             appearance = new MaterialPropertyBlock();
 
-            cone = MakeFan("Keeper sight", conePoints);
+            for (int i = 0; i <= ConeSegments; i++)
+            {
+                float angle = Mathf.Lerp(-EscapeKeeper.SightAngle, EscapeKeeper.SightAngle,
+                    (float)i / ConeSegments) * Mathf.Deg2Rad;
+                coneDirections[i] = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+            }
+
+            cone = MakeFan("Keeper sight", conePoints, ConeSegments, 2);
             cone.MarkDynamic();
             coneRenderer = AddMarker(cone);
-            var disk = new Vector3[Segments + 2];
-            for (int i = 0; i <= Segments; i++)
+            var disk = new Vector3[StrikeSegments + 2];
+            for (int i = 0; i <= StrikeSegments; i++)
             {
-                float angle = i * 2f * Mathf.PI / Segments;
+                float angle = i * 2f * Mathf.PI / StrikeSegments;
                 disk[i + 1] = new Vector3(Mathf.Sin(angle) * 1.15f, 0f, Mathf.Cos(angle) * 1.15f);
             }
-            strike = MakeFan("Keeper lunge indicator", disk);
+            strike = MakeFan("Keeper lunge indicator", disk, StrikeSegments, 1);
             strikeRenderer = AddMarker(strike);
             coneRenderer.enabled = strikeRenderer.enabled = false;
         }
@@ -58,28 +67,31 @@ namespace Amusnet.ChickenEscape
             else
             {
                 SetTint(coneRenderer, keeper.HasSpottedSomeone ? ChaseColor : keeper.IsDistracted ? DecoyColor : PatrolColor);
-                if (Time.time >= nextScan)
-                {
-                    ProjectCone();
-                    nextScan = Time.time + .055f;
-                }
+                ProjectCone();
             }
         }
 
         void ProjectCone()
         {
-            conePoints[0] = Vector3.up * .075f;
-            for (int i = 0; i <= Segments; i++)
+            conePoints[0] = Lift;
+            float previous = ScanDirection(coneDirections[0]);
+            for (int i = 0; i < ConeSegments; i++)
             {
-                float angle = Mathf.Lerp(-EscapeKeeper.SightAngle, EscapeKeeper.SightAngle, (float)i / Segments) * Mathf.Deg2Rad;
-                Vector3 direction = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
-                float distance = Physics.Raycast(keeper.Eye, transform.TransformDirection(direction), out var hit,
-                    EscapeKeeper.SightRange, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
-                    ? Mathf.Max(.05f, hit.distance - .055f) : EscapeKeeper.SightRange;
-                conePoints[i + 1] = direction * distance + Vector3.up * .075f;
+                float next = ScanDirection(coneDirections[i + 1]);
+                // Give the whole slice the nearer edge so its triangle cannot cut through cover.
+                float distance = Mathf.Min(previous, next);
+                conePoints[2 * i + 1] = coneDirections[i] * distance + Lift;
+                conePoints[2 * i + 2] = coneDirections[i + 1] * distance + Lift;
+                previous = next;
             }
             cone.vertices = conePoints;
             cone.RecalculateBounds();
+        }
+
+        float ScanDirection(Vector3 direction)
+        {
+            float hit = keeper.SightDistance(transform.TransformDirection(direction), EscapeKeeper.SightRange);
+            return Mathf.Max(0f, hit - .025f);
         }
 
         MeshRenderer AddMarker(Mesh mesh)
@@ -100,13 +112,13 @@ namespace Amusnet.ChickenEscape
             renderer.SetPropertyBlock(appearance);
         }
 
-        static Mesh MakeFan(string name, Vector3[] points)
+        static Mesh MakeFan(string name, Vector3[] points, int segments, int stride)
         {
-            var triangles = new int[Segments * 3];
-            for (int i = 0; i < Segments; i++)
+            var triangles = new int[segments * 3];
+            for (int i = 0; i < segments; i++)
             {
-                triangles[i * 3 + 1] = i + 1;
-                triangles[i * 3 + 2] = i + 2;
+                triangles[i * 3 + 1] = i * stride + 1;
+                triangles[i * 3 + 2] = i * stride + 2;
             }
             return new Mesh { name = name, vertices = points, triangles = triangles };
         }

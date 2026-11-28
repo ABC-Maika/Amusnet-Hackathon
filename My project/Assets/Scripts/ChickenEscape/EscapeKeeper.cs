@@ -12,22 +12,22 @@ namespace Amusnet.ChickenEscape
             ScoopingHen, CarryingHen, PuttingHenDown, CorneringDog, HoldingDog
         }
 
-        public const float SightRange = 8.2f;
-        public const float SightAngle = 55f;
-        public const float EyeHeight = .80f;
+        public const float SightRange = 7.2f;
+        public const float SightAngle = 49f;
 
+        const float EyeHeight = .80f;
         const float BarkHearing = 12.8f;
-        const float HenGrabDistance = 1.28f;
-        const float HenLungeRange = 2.6f;
-        const float DogReach = 1.66f;
-        const float DogWarningTime = .94f;
+        const float HenGrabDistance = 1.18f;
+        const float HenLungeRange = 2.3f;
+        const float DogReach = 1.5f;
+        const float DogWarningTime = 1.24f;
         const float DogRescueTime = 6f;
-        const float WindupTime = .42f;
+        const float WindupTime = .60f;
         const float ScoopTime = .81f;
         const float SetDownTime = .62f;
         const float DecoyDuration = 4.45f;
         const float DecoyBreakRange = 2.65f;
-        const float PursuitMemory = 2.85f;
+        const float PursuitMemory = 2.2f;
         const float GateGrace = 3.2f;
         static readonly float ViewDot = Mathf.Cos(SightAngle * Mathf.Deg2Rad);
         static readonly Vector3[] Patrol = {
@@ -54,7 +54,6 @@ namespace Amusnet.ChickenEscape
             or PatrolState.CorneringDog or PatrolState.HoldingDog;
         public bool IsDistracted => Current == PatrolState.Distracted;
         public bool IsHandlingHen => inHands != null;
-        public Vector3 Eye => transform.position + Vector3.up * EyeHeight;
         public Vector3 DecoyPosition => decoyPoint;
         public Vector3 StrikePoint => strikePoint;
         public float DogPressure => Mathf.Clamp01(dogReachTime / DogWarningTime);
@@ -177,10 +176,10 @@ namespace Amusnet.ChickenEscape
                     proceedsAt = Time.time + WindupTime;
                     Stop("Watch");
                 }
-                else Go(PatrolState.Pursuing, Lead(lastSeen, hen ? hen.Velocity : dog.Velocity, .48f), 6.25f);
+                else Go(PatrolState.Pursuing, Lead(lastSeen, hen ? hen.Velocity : dog.Velocity, .40f), 5.6f);
             }
             else if (Time.time < tracksUntil && (quarry ? !quarry.Saved && !quarry.Caught : dogInYard))
-                Go(PatrolState.Pursuing, lastSeen, 5.55f);
+                Go(PatrolState.Pursuing, lastSeen, 5.05f);
             else if (Time.time < barkUntil) Go(PatrolState.Investigating, barkPoint, 4.75f);
             else if (gate.IsOpen && hensInPen && Time.time > gate.OpenedAt + GateGrace)
             {
@@ -243,7 +242,7 @@ namespace Amusnet.ChickenEscape
 
         EscapeHen Lunge()
         {
-            Go(PatrolState.Lunging, strikePoint, 8.25f, .10f);
+            Go(PatrolState.Lunging, strikePoint, 7.25f, .10f);
             if (quarry && !quarry.Caught && !quarry.Saved && !yard.InPen(quarry.transform.position) &&
                 Within(quarry.transform.position, HenGrabDistance) && ClearTo(quarry.transform.position))
             {
@@ -371,8 +370,24 @@ namespace Amusnet.ChickenEscape
 
         bool ClearTo(Vector3 position)
         {
-            position.y = Eye.y;
-            return !Physics.Linecast(Eye, position, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            Vector3 offset = Flat(position - transform.position);
+            float distance = offset.magnitude;
+            return distance < .01f || SightDistance(offset / distance, distance) >= distance;
+        }
+
+        internal float SightDistance(Vector3 direction, float distance)
+        {
+            Vector3 eye = transform.position + Vector3.up * EyeHeight;
+            if (Physics.Raycast(eye, direction, out var hit, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                distance = hit.distance;
+
+            // Sweep down to hen height so low cover and raised cart beds both cast a shadow.
+            Vector3 lower = transform.position + Vector3.up * .22f;
+            if (Physics.CapsuleCast(lower, eye, .055f, direction, out hit, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                distance = hit.distance;
+            return distance;
         }
 
         bool Within(Vector3 point, float range) => Flat(point - transform.position).sqrMagnitude < range * range;
