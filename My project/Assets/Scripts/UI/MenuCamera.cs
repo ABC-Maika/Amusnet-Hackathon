@@ -46,6 +46,20 @@ public class MenuCamera : MonoBehaviour
         if (GameFlow.Instance != null && GameFlow.Instance.Current != GameFlow.State.Menu) HandOver();
     }
 
+    public Transform UseFlightCamera(Camera flightView)
+    {
+        bool active = gameplayCamera != null && gameplayCamera.gameObject.activeSelf;
+        if (gameplayCamera != null) gameplayCamera.gameObject.SetActive(false);
+
+        var pose = new GameObject("Village Flight Camera");
+        pose.SetActive(false);
+        pose.transform.SetPositionAndRotation(flightView.transform.position, flightView.transform.rotation);
+        gameplayCamera = pose.AddComponent<CinemachineCamera>();
+        gameplayCamera.Lens = LensSettings.FromCamera(flightView);
+        pose.SetActive(active);
+        return pose.transform;
+    }
+
     void LateUpdate()
     {
         if (flying) return; // hold the orbit's last pose so the blend down to the player starts clean

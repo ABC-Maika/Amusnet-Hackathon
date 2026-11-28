@@ -2008,10 +2008,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 506c6e826e56eb9498e958c4d29d30a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapLoader
-  mapScene: Village
+  mapScene: Sprint3Village
   spawnPointName: PlayerSpawn
   player: {fileID: 1684217539}
-  skyOverride: {fileID: 2100000, guid: 7e11a1a6dde1fc047a918d2b5b97ccf0, type: 2}
+  skyOverride: {fileID: 0}
 --- !u!4 &686498402
 Transform:
   m_ObjectHideFlags: 0
@@ -3101,6 +3101,10 @@ PrefabInstance:
       propertyPath: player
       value: 
       objectReference: {fileID: 1684217539}
+    - target: {fileID: 4730462799662725145, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
+      propertyPath: risePerSecond
+      value: 0.75
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

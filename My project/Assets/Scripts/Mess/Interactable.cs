@@ -24,7 +24,7 @@ namespace Amusnet.Mess
 
         public bool TryInteract(MessManager manager, Interactable cause)
         {
-            if (!manager || !isActiveAndEnabled || HasInteracted || messValue <= 0) return false;
+            if (!manager || !manager.CanInteract || !isActiveAndEnabled || HasInteracted || messValue <= 0) return false;
             HasInteracted = true;
             ChainRoot = cause && cause.ChainRoot ? cause.ChainRoot : this;
             ChainRoot.ChainLength++;
