@@ -47,22 +47,35 @@ public sealed class NatureSpots : MonoBehaviour
 
     public int CountOf(Kind kind) => spots.FindAll(s => s.kind == kind).Count;
 
-    void Start()
+    void OnEnable()
     {
         if (player != null)
         {
             shelter = player.GetComponentInChildren<ShelterState>();
             flight = player.GetComponentInChildren<ButterflyController>();
         }
-        MapLoader.WhenReady(Build);
+        var map = SceneManager.GetActiveScene();
+        if (container != null && map.isLoaded && map != gameObject.scene)
+            Build(map);
+        else
+            MapLoader.WhenReady(Build);
     }
 
-    void OnDestroy() => MapLoader.MapReady -= Build;
+    void OnDisable() => MapLoader.MapReady -= Build;
 
     void Build(Scene map)
     {
         MapLoader.MapReady -= Build;
-        if (container != null) return;
+        if (container != null && markers.ContainsKey(Kind.Hide) && markers.ContainsKey(Kind.Boost))
+            return;
+        if (container != null)
+        {
+            container.gameObject.SetActive(false);
+            Destroy(container.gameObject);
+        }
+        spots.Clear();
+        markers.Clear();
+        nextMarkerPass = 0f;
         container = new GameObject("Nature Spots (runtime)").transform;
         container.SetParent(transform, false);
         int ignoreRaycast = LayerMask.NameToLayer("Ignore Raycast");
@@ -182,6 +195,8 @@ public sealed class NatureSpots : MonoBehaviour
 
     void UpdateMarkers(Kind kind)
     {
+        if (!markers.TryGetValue(kind, out var pool)) return;
+
         // The nearest ready spots of this kind within range get a marker; the rest lose theirs.
         nearby.Clear();
         Vector3 p = player.position;
@@ -191,7 +206,6 @@ public sealed class NatureSpots : MonoBehaviour
         nearby.Sort((a, b) => (a.bounds.center - p).sqrMagnitude.CompareTo((b.bounds.center - p).sqrMagnitude));
         if (nearby.Count > markersPerKind) nearby.RemoveRange(markersPerKind, nearby.Count - markersPerKind);
 
-        var pool = markers[kind];
         foreach (var s in spots)
         {
             if (s.kind != kind || s.marker == null || nearby.Contains(s)) continue;

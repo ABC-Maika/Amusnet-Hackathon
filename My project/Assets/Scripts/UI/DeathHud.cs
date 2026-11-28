@@ -216,8 +216,8 @@ namespace Butterfly.UI
             if (DeathManager.Instance != null) steerSeconds = Mathf.Max(0.5f, DeathManager.Instance.steerDuration);
             if (deathTitle) deathTitle.text = "MARTYR'S LAST FLUTTER";
             if (deathSub) deathSub.text = string.IsNullOrEmpty(killerName)
-                ? "Steer your fall into the biggest mess!"
-                : $"Caught by the {killerName}.  Steer your fall into the biggest mess!";
+                ? "The butterfly is falling."
+                : $"Caught by the {killerName}. The butterfly is falling.";
             if (legacyPopupGroup) legacyPopupGroup.alpha = 0f;
         }
 

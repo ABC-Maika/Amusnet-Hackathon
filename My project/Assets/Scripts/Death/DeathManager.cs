@@ -8,7 +8,7 @@ namespace Butterfly.Death
 {
     /// <summary>
     /// "Martyr's Last Flutter". Call Die(cause, butterfly) from any killer or from the predator system.
-    /// Sequence: slow-mo (~15%) -> camera follows fall -> ~3s steering -> landing -> chain reaction -> legacy bonus.
+    /// Sequence: slow-mo (~15%) -> camera follows fall -> a short uncontrolled fall -> landing -> chain reaction -> legacy bonus.
     /// </summary>
     public class DeathManager : MonoBehaviour
     {
@@ -17,8 +17,8 @@ namespace Butterfly.Death
         [Header("Slow-mo")]
         [Range(0.05f, 1f)] public float slowMoScale = 0.15f;
         public float slowMoEaseIn = 0.15f;      // real seconds
-        public float steerDuration = 3f;        // real seconds
-        public float returnToNormalTime = 0.6f; // real seconds, after steering ends
+        [Tooltip("Duration of the slow-motion fall in real seconds.")] public float steerDuration = 3f;        // real seconds
+        public float returnToNormalTime = 0.6f; // real seconds, after slow motion ends
         public float maxFallTime = 8f;          // real seconds safety net
 
         [Header("Fall")]
@@ -85,19 +85,27 @@ namespace Butterfly.Death
             else
             {
                 foreach (var mb in butterfly.GetComponents<MonoBehaviour>())
-                    if (mb != null && !(mb is MartyrSteering) && !(mb is LandingDetector)) mb.enabled = false;
+                    if (mb != null && !(mb is LandingDetector)) mb.enabled = false;
             }
 
-            // The real flight controller moves with a CharacterController, which a Rigidbody can't collide
-            // with. Swap it for a small sphere so the fall can land.
+            var flight = butterfly.GetComponent<ButterflyController>();
+            if (flight) flight.enabled = false;
+            foreach (var pollen in butterfly.GetComponentsInChildren<ButterflyPollen>())
+                pollen.enabled = false;
+            var steering = butterfly.GetComponent<MartyrSteering>();
+            if (steering) steering.enabled = false;
+
+            // Replace live movement's capsule with a solid collider for the falling rigidbody.
             var cc = butterfly.GetComponent<CharacterController>();
-            if (cc != null && cc.enabled)
+            if (cc) cc.enabled = false;
+            var sphere = butterfly.GetComponent<SphereCollider>();
+            if (!sphere) sphere = butterfly.AddComponent<SphereCollider>();
+            sphere.enabled = true;
+            sphere.isTrigger = false;
+            if (cc)
             {
-                cc.enabled = false;
-                var sphere = butterfly.GetComponent<SphereCollider>();
-                if (sphere == null) sphere = butterfly.AddComponent<SphereCollider>();
                 sphere.center = cc.center;
-                sphere.radius = Mathf.Max(0.05f, cc.radius * 0.6f);
+                sphere.radius = Mathf.Max(.05f, cc.radius);
             }
 
             // Physics body.
@@ -107,15 +115,12 @@ namespace Butterfly.Death
             rb.useGravity = false;
             rb.linearDamping = 0.5f;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.linearVelocity = cause.launchVelocity;
 
             var landing = butterfly.GetComponent<LandingDetector>();
             if (landing == null) landing = butterfly.AddComponent<LandingDetector>();
-            landing.Init(groundMask);
-
-            var steering = butterfly.GetComponent<MartyrSteering>();
-            if (steering == null) steering = butterfly.AddComponent<MartyrSteering>();
-            steering.enabled = true;
+            landing.Init(groundMask, rb, sphere, flight ? flight.LastTerrainPosition : null);
 
             // Camera.
             MartyrCamera martyrCam = null;
@@ -137,7 +142,7 @@ namespace Butterfly.Death
             }
             SetTime(slowMoScale);
 
-            // Steering window: she drifts down slowly.
+            // She drifts down in slow motion.
             float elapsed = 0f;
             while (elapsed < steerDuration && !landing.Landed)
             {
@@ -148,9 +153,8 @@ namespace Butterfly.Death
                 yield return null;
             }
 
-            // Steering over: back to normal time, fall for real.
-            steering.enabled = false;
-            rb.useGravity = true;
+            // Restore normal time and gravity for the rest of the fall.
+            rb.useGravity = !landing.Landed;
             for (float t = 0f; t < returnToNormalTime && !landing.Landed; t += Time.unscaledDeltaTime)
             {
                 while (Butterfly.UI.PauseMenu.IsPaused) yield return null;
