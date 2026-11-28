@@ -73,6 +73,7 @@ namespace Amusnet.World
 
         private void Awake()
         {
+            if (!pollen) return; // resolved later from the player (UsePlayerPollen)
             home = goat.position;
             homeRotation = goat.rotation;
             particles = new ParticleSystem.Particle[pollen.main.maxParticles];
@@ -81,8 +82,22 @@ namespace Amusnet.World
             drift.space = ParticleSystemSimulationSpace.World;
         }
 
+        // In the game the map's preview butterfly (and its pollen) is switched off: use the player's pollen.
+        private bool UsePlayerPollen()
+        {
+            if (pollen && pollen.gameObject.activeInHierarchy) return true;
+            if (!ButterflyPollen.Active) return false;
+            pollen = ButterflyPollen.Active.GetComponent<ParticleSystem>();
+            particles = new ParticleSystem.Particle[pollen.main.maxParticles];
+            var drift = pollen.velocityOverLifetime;
+            drift.enabled = true;
+            drift.space = ParticleSystemSimulationSpace.World;
+            return true;
+        }
+
         private void LateUpdate()
         {
+            if (!UsePlayerPollen()) return;
             Vector3 air = wind ? wind.Sample(pollen.transform.position, Time.time) : Vector3.zero;
             var drift = pollen.velocityOverLifetime;
             drift.x = air.x;

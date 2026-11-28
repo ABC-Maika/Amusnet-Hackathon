@@ -26,7 +26,7 @@ namespace Amusnet.World
 
         private void Awake()
         {
-            particles = new ParticleSystem.Particle[pollen.main.maxParticles];
+            if (pollen) particles = new ParticleSystem.Particle[pollen.main.maxParticles];
             foreach (Renderer flower in flowers)
             {
                 if (!flower || !flower.gameObject.activeInHierarchy)
@@ -38,8 +38,19 @@ namespace Amusnet.World
             }
         }
 
+        // In the game the map's preview butterfly (and its pollen) is switched off: use the player's pollen.
+        private bool UsePlayerPollen()
+        {
+            if (pollen && pollen.gameObject.activeInHierarchy) return true;
+            if (!ButterflyPollen.Active) return false;
+            pollen = ButterflyPollen.Active.GetComponent<ParticleSystem>();
+            particles = new ParticleSystem.Particle[pollen.main.maxParticles];
+            return true;
+        }
+
         private void LateUpdate()
         {
+            if (!UsePlayerPollen()) return;
             hordes.RemoveAll(horde => !horde);
             if (hordes.Count < MaxHordes)
                 CheckPollen();

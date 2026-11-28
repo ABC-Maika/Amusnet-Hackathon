@@ -78,8 +78,11 @@ namespace Amusnet.World
 
         private void Awake()
         {
-            pollenTrail = pollen.GetComponent<ParticleSystem>();
-            pollenParticles = new ParticleSystem.Particle[pollenTrail.main.maxParticles];
+            if (pollen)
+            {
+                pollenTrail = pollen.GetComponent<ParticleSystem>();
+                pollenParticles = new ParticleSystem.Particle[pollenTrail.main.maxParticles];
+            }
             RememberHome(girl);
             foreach (Walker villager in villagers)
             {
@@ -102,8 +105,31 @@ namespace Amusnet.World
             }
         }
 
+        // In the game the map's preview butterfly is switched off: follow the player's butterfly and pollen.
+        private void UsePlayer()
+        {
+            if (!butterfly || !butterfly.gameObject.activeInHierarchy)
+            {
+                var live = FindAnyObjectByType<ButterflyController>();
+                if (live) butterfly = live;
+            }
+            if (!cameraObstacles || !cameraObstacles.gameObject.activeInHierarchy)
+            {
+                var live = FindAnyObjectByType<CinemachineDeoccluder>();
+                if (live) cameraObstacles = live;
+            }
+            if ((!pollen || !pollen.gameObject.activeInHierarchy) && ButterflyPollen.Active)
+            {
+                pollen = ButterflyPollen.Active;
+                pollenTrail = pollen.GetComponent<ParticleSystem>();
+                pollenParticles = new ParticleSystem.Particle[pollenTrail.main.maxParticles];
+            }
+        }
+
         private void Update()
         {
+            UsePlayer();
+            if (!pollen) return;
             elapsed += Time.deltaTime;
             girl.gait = 0f;
             foreach (Walker villager in villagers)

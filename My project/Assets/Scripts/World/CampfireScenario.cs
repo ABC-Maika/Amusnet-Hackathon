@@ -126,7 +126,6 @@ namespace Amusnet.World
         void Start()
         {
             cam = Camera.main;
-            FreezeAtNight();
             foreach (var entry in navigation)
             {
                 if (!entry.building || !entry.obstacle || !entry.obstacle.isActiveAndEnabled) continue;
@@ -159,16 +158,6 @@ namespace Amusnet.World
             phase = Phase.Tending;
             chair.Sit();
             PostLureTask();
-        }
-
-        // The weather cycles through day and rain: hold it at a dry night for this scenario.
-        void FreezeAtNight()
-        {
-            var weather = FindFirstObjectByType<WeatherSystem>();
-            if (!weather) return;
-            weather.startDay = 0.75f;
-            weather.dayLength = 1000000f;
-            weather.weatherPeriod = 1000000f;
         }
 
         // ---------- loop ----------
