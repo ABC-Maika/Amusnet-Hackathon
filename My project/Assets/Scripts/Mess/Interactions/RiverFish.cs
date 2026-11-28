@@ -17,10 +17,11 @@ namespace Amusnet.Mess
         [SerializeField] private Vector3 riverMax = new Vector3(66f, 0f, -15.5f);
         [SerializeField] private float swimSpeed = 1.4f;
         [SerializeField] private float stalkSpeed = 4f;
-        [SerializeField] private float attackRange = 13f;   // starts stalking when the butterfly is this close
-        [SerializeField] private float nearHeight = 7f;     // ...and this low over the water
-        [SerializeField] private float leapRange = 5f;      // horizontal distance at which it jumps
-        [SerializeField] private float leapTime = 1f;       // game seconds from jump to the bite
+        [SerializeField] private float attackRange = 6.5f;  // starts stalking when the butterfly is this close
+        [SerializeField] private float nearHeight = 4f;     // ...and this low over the water
+        [SerializeField] private float leapRange = 3.6f;     // horizontal distance at which it jumps
+        [SerializeField] private float leapGravity = 7f;    // floaty arc
+        [SerializeField] private float leapTime = 1.15f;      // game seconds from jump to the bite
         [SerializeField] private int mashesNeeded = 10;
         [SerializeField] private float cooldown = 7f;
         [SerializeField] private string label = "Fish";
@@ -30,7 +31,7 @@ namespace Amusnet.Mess
         private Vector3 target, vel;
         private Transform player;
         private float nextAttack, leapElapsed, seed, mashes, caughtMsg;
-        private bool expectLeft = true, dodged;
+        private bool expectLeft = true, dodged, splashedOut;
 
         private void Start()
         {
@@ -76,7 +77,7 @@ namespace Amusnet.Mess
             if (!player) return false;
             flat = Flat(player.position - transform.position).magnitude;
             return flat < range && player.position.y < waterY + nearHeight &&
-                   Mathf.Abs(player.position.z - RiverLane.ZAt(player.position.x, -19f)) < 12f;
+                   Mathf.Abs(player.position.z - RiverLane.ZAt(player.position.x, -19f)) < 5f;
         }
 
         private void Steer(Vector3 to, float speed, float dt)
@@ -102,7 +103,7 @@ namespace Amusnet.Mess
 
         private void UpdateStalk(float dt)
         {
-            if (!PlayerNear(attackRange * 1.5f, out float flat)) { Abort(); return; }
+            if (!PlayerNear(attackRange * 1.3f, out float flat)) { Abort(); return; }
             float tx = Mathf.Clamp(player.position.x, riverMin.x, riverMax.x), lz = RiverLane.ZAt(tx, -19f);
             var to = new Vector3(tx, waterY - 0.5f, Mathf.Clamp(player.position.z, lz - 2f, lz + 2f));
             Steer(to, stalkSpeed, dt);
@@ -120,13 +121,14 @@ namespace Amusnet.Mess
         private void StartLeap()
         {
             // Ballistic jump that reaches the butterfly's current position after leapTime.
-            const float g = 9.8f;
+            float g = leapGravity;
             var d = player.position - transform.position;
             vel = new Vector3(d.x / leapTime, d.y / leapTime + 0.5f * g * leapTime, d.z / leapTime);
             leapElapsed = 0f;
             mashes = 0f;
             expectLeft = Random.value < 0.5f;
             dodged = false;
+            splashedOut = false;
             state = State.Leap;
         }
 
@@ -134,9 +136,14 @@ namespace Amusnet.Mess
         {
             TimeSlow.Hold(0.25f);
             leapElapsed += dt;
-            vel += Vector3.down * 9.8f * dt;
+            vel += Vector3.down * leapGravity * dt;
             transform.position += vel * dt;
-            if (vel.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(vel);
+            Face(vel, dt);
+            if (!splashedOut && transform.position.y > waterY)
+            {
+                splashedOut = true;
+                BlastFx.Splash(new Vector3(transform.position.x, waterY, transform.position.z), 1.2f);
+            }
 
             var kb = Keyboard.current;
             if (kb != null && !dodged)
@@ -159,6 +166,16 @@ namespace Amusnet.Mess
                 return;
             }
             if (leapElapsed >= leapTime) Catch();
+        }
+
+        // Nose follows the arc, belly always down: pitch comes from the climb angle, never rolls.
+        private void Face(Vector3 v, float dt)
+        {
+            var flat = Flat(v);
+            if (flat.sqrMagnitude < 0.0001f) return;
+            float pitch = Mathf.Clamp(Mathf.Atan2(v.y, flat.magnitude) * Mathf.Rad2Deg, -60f, 60f);
+            var want = Quaternion.LookRotation(flat.normalized, Vector3.up) * Quaternion.Euler(-pitch, 0f, 0f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, want, 1f - Mathf.Exp(-12f * dt));
         }
 
         private void NudgePlayer(float side)
@@ -187,9 +204,12 @@ namespace Amusnet.Mess
 
         private void UpdateFall(float dt)
         {
-            vel += Vector3.down * 9.8f * dt;
+            vel += Vector3.down * leapGravity * dt;
+            float before = transform.position.y;
             transform.position += vel * dt;
-            if (vel.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(vel);
+            Face(vel, dt);
+            if (before > waterY && transform.position.y <= waterY && vel.y < 0f)
+                BlastFx.Splash(new Vector3(transform.position.x, waterY, transform.position.z), 1.5f);
             if (transform.position.y < waterY - 0.3f && vel.y < 0f)
             {
                 var p = transform.position; p.y = waterY - 0.35f; transform.position = p;

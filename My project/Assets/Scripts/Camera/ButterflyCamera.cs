@@ -12,6 +12,11 @@ public sealed class ButterflyCamera : CinemachineExtension
     [SerializeField, Range(0f, 15f)] private float maximumTurnLean = 7f;
     [SerializeField, Min(0f)] private float boostPullback = 1.15f;
     [SerializeField, Min(0.1f)] private float motionResponse = 5f;
+    [SerializeField, Range(0.3f, 10f)] private float turnCatchUp = 1.6f; // lower = camera swings slower after A/D
+    [SerializeField, Range(0f, 0.8f)] private float pitchFollow = 0.4f;   // camera tilts up/down with the climb
+    [SerializeField, Range(0f, 30f)] private float boostFovKick = 14f;
+    [SerializeField, Range(0f, 20f)] private float speedFovKick = 5f;
+    private float fovKick;
 
     private CinemachineFollow follow;
     private Transform trackedTarget;
@@ -21,6 +26,7 @@ public sealed class ButterflyCamera : CinemachineExtension
     private float currentPullback;
     private Vector3 restOffset;
     private float orbitYaw;
+    private float turnLag; // camera trails behind A/D turns, then catches up
     private float orbitTiltOffset;
     private bool capturedCursor;
     private bool inputEnabled = true;
@@ -97,9 +103,8 @@ public sealed class ButterflyCamera : CinemachineExtension
 
     private void ApplyMouseDelta(Vector2 pixels)
     {
-        Vector2 delta = pixels * (mouseSensitivity * SensitivityScale);
-        orbitYaw = Mathf.Repeat(orbitYaw + delta.x, 360f);
-        orbitTiltOffset = Mathf.Clamp(downwardTilt + orbitTiltOffset - delta.y, 5f, 65f) - downwardTilt;
+        // Mouse X orbits the camera. Mouse Y pitches the butterfly's flight (ButterflyController), and the camera follows that.
+        orbitYaw = Mathf.Repeat(orbitYaw + pixels.x * (mouseSensitivity * SensitivityScale), 360f);
     }
 
     public override void PrePipelineMutateCameraStateCallback(
@@ -125,15 +130,27 @@ public sealed class ButterflyCamera : CinemachineExtension
         }
         else if (deltaTime > 0f)
         {
-            float turnRate = Mathf.DeltaAngle(previousYaw, yaw) / deltaTime;
+            float dYaw = Mathf.DeltaAngle(previousYaw, yaw);
+            turnLag = Mathf.Clamp(turnLag - dYaw, -40f, 40f);
+            turnLag = Mathf.Lerp(turnLag, 0f, 1f - Mathf.Exp(-turnCatchUp * deltaTime));
+            float turnRate = dYaw / deltaTime;
             float desiredLean = Mathf.Clamp(turnRate / 105f, -1f, 1f) * maximumTurnLean;
             float response = 1f - Mathf.Exp(-motionResponse * deltaTime);
             cameraLean = Mathf.Lerp(cameraLean, desiredLean, response);
             currentPullback = Mathf.Lerp(currentPullback, pullback, response);
         }
 
+        if (player != null)
+        {
+            float response = deltaTime > 0f ? 1f - Mathf.Exp(-motionResponse * deltaTime) : 1f;
+            float wantTilt = Mathf.Clamp(downwardTilt - player.FlightPitch * pitchFollow, 5f, 65f) - downwardTilt;
+            orbitTiltOffset = Mathf.Lerp(orbitTiltOffset, wantTilt, response);
+            float wantFov = (player.IsBoosting ? boostFovKick : 0f) + Mathf.Clamp01(player.Speed01 - 0.5f) * speedFovKick;
+            fovKick = Mathf.Lerp(fovKick, wantFov, response);
+        }
+
         previousYaw = yaw;
-        Quaternion orbit = Quaternion.Euler(orbitTiltOffset, orbitYaw, 0f);
+        Quaternion orbit = Quaternion.Euler(orbitTiltOffset, orbitYaw + turnLag, 0f);
         follow.FollowOffset = orbit * (restOffset + restOffset.normalized * currentPullback);
     }
 
@@ -148,8 +165,9 @@ public sealed class ButterflyCamera : CinemachineExtension
     {
         if (stage == CinemachineCore.Stage.Aim && vcam.Follow != null)
         {
-            float yaw = vcam.Follow.eulerAngles.y + orbitYaw;
+            float yaw = vcam.Follow.eulerAngles.y + orbitYaw + turnLag;
             state.RawOrientation = Quaternion.Euler(downwardTilt + orbitTiltOffset, yaw, cameraLean);
+            state.Lens.FieldOfView += fovKick;
         }
     }
 
