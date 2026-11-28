@@ -1,20 +1,51 @@
-/* The menu floats over the live village; no backdrop, so the camera flyover shows through. */
-.menu-screen {
-    justify-content: flex-start;
-    padding-top: 90px;
+/* Main menu specifics. Layout, buttons and type are shared in Common.uss. */
+
+.menu-scrim {
+    transition-property: opacity;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-cubic;
 }
 
+.menu-logo-exit,
 .menu-logo {
-    width: 200px;
-    height: 150px;
+    align-items: flex-start;
 }
 
-.menu-title {
-    font-size: 104px;
-    margin-top: 4px;
+.menu-mark {
+    width: 104px;
+    height: 78px;
+    margin: 0 0 14px -6px;
 }
 
-.menu-buttons {
-    align-items: center;
-    margin-top: 56px;
+.menu-tag {
+    margin-top: 40px;
+}
+
+/* ---------- Play pressed: the UI leaves in 0.3 s, then the camera swoops ---------- */
+
+.menu--exit .menu-scrim {
+    opacity: 0;
+}
+
+.menu--exit .menu-logo-exit {
+    translate: 0 -48px;
+    opacity: 0;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-cubic;
+    transition-delay: 0s;
+}
+
+.menu--exit .pbtn-wrap {
+    translate: 0 36px;
+    opacity: 0;
+    transition-duration: 0.22s;
+    transition-timing-function: ease-in-cubic;
+}
+
+.menu--exit .menu-exit-2 {
+    transition-delay: 0.04s;
+}
+
+.menu--exit .menu-exit-3 {
+    transition-delay: 0.08s;
 }
