@@ -15,7 +15,14 @@ namespace Butterfly.UI
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
-        public static bool IsPaused { get; private set; }
+        static bool ownPaused;
+
+        /// <summary>True while this menu or the game's own pause (GameFlow.Paused) is open.</summary>
+        public static bool IsPaused
+        {
+            get => ownPaused || (GameFlow.Instance != null && GameFlow.Instance.Current == GameFlow.State.Paused);
+            private set => ownPaused = value;
+        }
 
         // Enter Play Mode without a domain reload keeps statics: start every session unpaused.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

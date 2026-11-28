@@ -117,8 +117,8 @@ namespace Amusnet.Mess
 
         private Vector3 Grounded(Vector3 position)
         {
-            if (terrain)
-                position.y = terrain.transform.position.y + terrain.SampleHeight(position) + .04f;
+            if (Ground(terrain))
+                position.y = Ground(terrain).transform.position.y + Ground(terrain).SampleHeight(position) + .04f;
             return position;
         }
     }

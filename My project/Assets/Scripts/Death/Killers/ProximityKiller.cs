@@ -92,6 +92,7 @@ namespace Butterfly.Death
         void Update()
         {
             if (!autoHunt) return;
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) return; // no hunting on menus or end screens
             if (DeathManager.Instance != null && DeathManager.Instance.IsDying) return;
             if (!ResolveButterfly()) return;
 

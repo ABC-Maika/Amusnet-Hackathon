@@ -1,13 +1,13 @@
-using Amusnet.Mess;
 using Amusnet.World;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Loads the village map scene alongside this (systems) scene, so the map's owner can keep editing it
 /// on its own. The map becomes the active scene so its sky, fog and lighting apply; its own camera
-/// is switched off because this scene's camera drives the view. A map with a flight rig uses its own
-/// butterfly; other maps move the existing butterfly to the map's spawn point.
+/// and any preview butterfly rig are switched off because this scene owns the camera and the player,
+/// and the player is moved to the map's spawn point.
 /// </summary>
 public class MapLoader : MonoBehaviour
 {
@@ -46,23 +46,18 @@ public class MapLoader : MonoBehaviour
             DynamicGI.UpdateEnvironment();
         }
         var roots = map.GetRootGameObjects();
-        EnvironmentFlightPreview flight = null;
         foreach (var root in roots)
         {
+            // This scene owns the player and the cameras: switch off the map's own preview rig
+            // (its butterfly, follow camera, pollen trail and cameras) so there is only one of each.
+            if (root.GetComponentInChildren<ButterflyController>(true) || root.GetComponentInChildren<EnvironmentFlightPreview>(true) ||
+                root.GetComponentInChildren<CinemachineCamera>(true) || root.GetComponentInChildren<ButterflyPollen>(true))
+            {
+                root.SetActive(false);
+                continue;
+            }
             foreach (var cam in root.GetComponentsInChildren<Camera>()) cam.gameObject.SetActive(false);
             foreach (var listener in root.GetComponentsInChildren<AudioListener>()) listener.enabled = false;
-            if (!flight) flight = root.GetComponentInChildren<EnvironmentFlightPreview>();
-        }
-
-        var gameCamera = Camera.main;
-        if (flight && flight.view && flight.TryGetComponent<MessManager>(out _) &&
-            MenuCamera.Instance && GameFlow.Instance && gameCamera)
-        {
-            if (player) player.gameObject.SetActive(false);
-            var pose = MenuCamera.Instance.UseFlightCamera(flight.view);
-            flight.AttachToRun(GameFlow.Instance, gameCamera, pose);
-            if (PredatorSystem.Instance) PredatorSystem.Instance.Track(flight.transform);
-            return;
         }
 
         foreach (var root in roots)

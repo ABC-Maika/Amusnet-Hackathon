@@ -26,7 +26,7 @@ namespace Amusnet.Mess
                     float u = Mathf.Clamp01(t / .86f);
                     float a = Mathf.SmoothStep(0, Mathf.PI * .5f, u);
                     Vector3 p = start + rest * Vector3.forward * (halfWidth * (1f - Mathf.Cos(a)) + .55f * Mathf.Sin(a));
-                    p.y = terrain.SampleHeight(p) + terrain.transform.position.y + halfWidth * Mathf.Sin(a);
+                    p.y = Ground(terrain).SampleHeight(p) + Ground(terrain).transform.position.y + halfWidth * Mathf.Sin(a);
                     transform.SetPositionAndRotation(p, rest * Quaternion.Euler(a * Mathf.Rad2Deg, 0, 0));
                     if (u >= 1f) break;
                     yield return null;

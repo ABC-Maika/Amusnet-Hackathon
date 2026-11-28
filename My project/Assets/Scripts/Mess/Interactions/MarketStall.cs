@@ -68,7 +68,7 @@ namespace Amusnet.Mess
             {
                 float u = Mathf.Clamp01(t / duration);
                 Vector3 p = Vector3.Lerp(start, end, u);
-                float floor = terrain.SampleHeight(p) + terrain.transform.position.y + .16f;
+                float floor = Ground(terrain).SampleHeight(p) + Ground(terrain).transform.position.y + .16f;
                 float fall = Mathf.Clamp01(t / flight);
                 float bounce = Mathf.Abs(Mathf.Sin((t - flight) * 10f)) * .28f * Mathf.Exp(-3f * (t - flight));
                 p.y = t < flight ? Mathf.Lerp(start.y, floor, fall * fall) : floor + bounce * (1f - u);

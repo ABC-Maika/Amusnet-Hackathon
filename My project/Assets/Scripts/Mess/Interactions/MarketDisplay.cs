@@ -45,7 +45,7 @@ namespace Amusnet.Mess
             Quaternion rest = jug.rotation;
             Vector3 end = start + transform.TransformVector(new Vector3((index % 3 - 1) * (.42f + .12f * index), 0, .74f + .22f * index));
             if (nearbyPot && index == 0) end = nearbyPot.transform.position;
-            end.y = terrain.SampleHeight(end) + terrain.transform.position.y + .17f;
+            end.y = Ground(terrain).SampleHeight(end) + Ground(terrain).transform.position.y + .17f;
             for (float t = 0f; ; t += Time.deltaTime)
             {
                 float u = Mathf.Clamp01(t / (1.02f + index * .06f));

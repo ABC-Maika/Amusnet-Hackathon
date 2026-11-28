@@ -72,7 +72,7 @@ namespace Amusnet.Mess
                 {
                     float u = Mathf.Clamp01(t / duration);
                     Vector3 p = Vector3.Lerp(start, end, leg == 0 ? u * (.35f + .65f * u) : u);
-                    p.y = terrain.SampleHeight(p) + terrain.transform.position.y + .47f;
+                    p.y = Ground(terrain).SampleHeight(p) + Ground(terrain).transform.position.y + .47f;
                     if (leg == 0)
                     {
                         float kick = Mathf.Clamp01(u * 3f);
