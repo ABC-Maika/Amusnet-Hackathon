@@ -8842,6 +8842,9 @@ MonoBehaviour:
   dayLength: 180
   weatherPeriod: 90
   startDay: 0.3
+  rainAnchor: {fileID: 0}
+  dayFog: 0.012
+  nightFog: 0.047
 --- !u!4 &93086590
 Transform:
   m_ObjectHideFlags: 0
@@ -28032,6 +28035,9 @@ MonoBehaviour:
   impulse: {fileID: 436003447}
   downwardTilt: 20.6
   mouseSensitivity: 0.18
+  maximumTurnLean: 7
+  boostPullback: 1.15
+  motionResponse: 5
 --- !u!114 &436003446
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85382,6 +85388,18 @@ PrefabInstance:
     m_TransformParent: {fileID: 1286220976}
     m_Modifications:
     - target: {fileID: 961930557003830482, guid: 9beca742c83e77445b8903d243362355, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 961930557003830482, guid: 9beca742c83e77445b8903d243362355, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 961930557003830482, guid: 9beca742c83e77445b8903d243362355, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 961930557003830482, guid: 9beca742c83e77445b8903d243362355, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -112641,7 +112659,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -6.9677424, y: 9.079597, z: 25.342234}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1286220976}
