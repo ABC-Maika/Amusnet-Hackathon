@@ -15,6 +15,7 @@ public sealed class ButterflyController : MonoBehaviour
     private float yaw;
     private float pitch;
 
+    public bool IsBoosting { get; private set; }
     public float Speed => motor != null && motor.enabled ? motor.velocity.magnitude : 0f;
 
     private void Awake()
@@ -43,10 +44,10 @@ public sealed class ButterflyController : MonoBehaviour
         if (Gamepad.current != null)
             steer += Gamepad.current.leftStick.ReadValue();
 
-        Simulate(Vector2.ClampMagnitude(steer, 1f), Time.deltaTime);
+        Simulate(Vector2.ClampMagnitude(steer, 1f), Time.deltaTime, keyboard?.leftShiftKey.isPressed == true);
     }
 
-    public void Simulate(Vector2 steer, float deltaTime)
+    public void Simulate(Vector2 steer, float deltaTime, bool boostHeld = false)
     {
         if (deltaTime <= 0f)
             return;
@@ -68,15 +69,24 @@ public sealed class ButterflyController : MonoBehaviour
             // Keep ground contact current, including when a supporting surface moves away.
             SetWingAnimation((motor.Move(Vector3.down * deltaTime) & CollisionFlags.Below) == 0);
             velocity = Vector3.zero;
+            IsBoosting = false;
             return;
         }
 
-        Vector3 targetVelocity = visual.forward * settings.flightSpeed;
+        bool boost = boostHeld && settings.boostSpeed > settings.flightSpeed;
+        float speed = boost ? settings.boostSpeed : settings.flightSpeed;
+        Vector3 targetVelocity = visual.forward * speed;
         velocity = Vector3.MoveTowards(velocity, targetVelocity, settings.acceleration * deltaTime);
         CollisionFlags contacts = motor.Move(velocity * deltaTime);
         bool landed = (contacts & CollisionFlags.Below) != 0;
         velocity = landed ? Vector3.zero : motor.velocity;
+        IsBoosting = boost && !landed && Vector3.Dot(velocity, visual.forward) > 0.1f;
         SetWingAnimation(!landed);
+    }
+
+    private void OnDisable()
+    {
+        IsBoosting = false;
     }
 
     private void SetWingAnimation(bool airborne)

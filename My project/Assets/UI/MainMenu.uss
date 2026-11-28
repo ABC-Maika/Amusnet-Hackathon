@@ -1,0 +1,20 @@
+/* The menu floats over the live village; no backdrop, so the camera flyover shows through. */
+.menu-screen {
+    justify-content: flex-start;
+    padding-top: 90px;
+}
+
+.menu-logo {
+    width: 200px;
+    height: 150px;
+}
+
+.menu-title {
+    font-size: 104px;
+    margin-top: 4px;
+}
+
+.menu-buttons {
+    align-items: center;
+    margin-top: 56px;
+}
