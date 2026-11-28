@@ -12,6 +12,7 @@ public sealed class ButterflyFlightSettings : ScriptableObject
 
     [Header("Flight")]
     [FormerlySerializedAs("glideSpeed")]
-    [Min(0.1f)] public float flightSpeed = 5f;
+    [Min(0.1f)] public float flightSpeed = 3.25f;
+    [Min(0.1f)] public float boostSpeed = 7f;
     [Min(0.1f)] public float acceleration = 16f;
 }

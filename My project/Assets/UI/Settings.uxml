@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="Common.uss" />
+    <ui:VisualElement name="settings" class="card settings">
+        <ui:Label text="Settings" class="section-title reveal" />
+        <ui:VisualElement class="setting-row reveal delay-1">
+            <ui:Label text="Master volume" class="setting-label" />
+            <ui:Slider name="masterVolume" low-value="0" high-value="1" fill="true" class="slider" />
+            <ui:Label name="masterVolumeValue" text="80%" class="setting-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row reveal delay-1">
+            <ui:Label text="Music" class="setting-label" />
+            <ui:Slider name="musicVolume" low-value="0" high-value="1" fill="true" class="slider" />
+            <ui:Label name="musicVolumeValue" text="80%" class="setting-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row reveal delay-2">
+            <ui:Label text="Sound effects" class="setting-label" />
+            <ui:Slider name="sfxVolume" low-value="0" high-value="1" fill="true" class="slider" />
+            <ui:Label name="sfxVolumeValue" text="80%" class="setting-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row reveal delay-2">
+            <ui:Label text="Mouse sensitivity" class="setting-label" />
+            <ui:Slider name="sensitivity" low-value="0.2" high-value="3" fill="true" class="slider" />
+            <ui:Label name="sensitivityValue" text="1.0x" class="setting-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row reveal delay-3">
+            <ui:Label text="Fullscreen" class="setting-label" />
+            <ui:Toggle name="fullscreen" class="switch" />
+        </ui:VisualElement>
+        <ui:VisualElement class="reveal delay-4">
+            <ui:Button name="settingsBack" text="Back" class="btn btn--primary settings-back" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

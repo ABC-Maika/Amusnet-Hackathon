@@ -10,6 +10,9 @@ namespace Amusnet.World
         [Min(1)] public float dayLength = 120f;
         [Min(1)] public float weatherPeriod = 42f;
         [Range(0,1)] public float startDay = 0.25f;
+        [SerializeField] private Transform rainAnchor;
+        [SerializeField, Min(0f)] private float dayFog = .012f;
+        [SerializeField, Min(0f)] private float nightFog = .047f;
         private float elapsed;
         public float Daylight { get; private set; }
         public float Rain { get; private set; }
@@ -28,10 +31,15 @@ namespace Amusnet.World
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogColor = sky;
-            RenderSettings.fogDensity = Mathf.Lerp(0.047f, 0.012f, Daylight) + Rain * 0.012f;
+            RenderSettings.fogDensity = Mathf.Lerp(nightFog, dayFog, Daylight) + Rain * 0.012f;
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = Color.Lerp(new Color(0.18f,0.21f,0.32f), Color.white * 0.8f, Daylight);
-            if (rain) { var emission = rain.emission; emission.rateOverTime = Rain * 850f; }
+            if (rain)
+            {
+                if (rainAnchor) rain.transform.position = rainAnchor.position + Vector3.up * 12f;
+                var emission = rain.emission;
+                emission.rateOverTime = Rain * 850f;
+            }
         }
     }
 }
