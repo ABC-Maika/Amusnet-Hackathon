@@ -1,4 +1,5 @@
 using Amusnet.World;
+using System.Linq;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -57,10 +58,10 @@ public class MapLoader : MonoBehaviour
         var roots = map.GetRootGameObjects();
         foreach (var root in roots)
         {
-            // This scene owns the player and the cameras: switch off the map's own preview rig
-            // (its butterfly, follow camera, pollen trail and cameras) so there is only one of each.
-            if (root.GetComponentInChildren<ButterflyController>(true) || root.GetComponentInChildren<EnvironmentFlightPreview>(true) ||
-                root.GetComponentInChildren<CinemachineCamera>(true) || root.GetComponentInChildren<ButterflyPollen>(true))
+            // This scene owns the player, the cameras and the game systems: switch off the map's own copies
+            // (a preview butterfly rig, or a death/anger/predator setup for testing the map alone) so there
+            // is only one of each.
+            if (OwnedHere.Any(type => root.GetComponentInChildren(type, true)))
             {
                 root.SetActive(false);
                 continue;
@@ -90,6 +91,13 @@ public class MapLoader : MonoBehaviour
         if (ReadyMap.IsValid() && ReadyMap.isLoaded) onReady(ReadyMap);
         else MapReady += onReady;
     }
+
+    static readonly System.Type[] OwnedHere =
+    {
+        typeof(ButterflyController), typeof(EnvironmentFlightPreview), typeof(CinemachineCamera), typeof(ButterflyPollen),
+        typeof(Butterfly.NPC.AngerLevels), typeof(Butterfly.Death.PredatorMeter), typeof(Butterfly.Death.PredatorBird),
+        typeof(Butterfly.UI.DeathHud), typeof(Butterfly.UI.PauseMenu), typeof(UnityEngine.EventSystems.EventSystem),
+    };
 
     static Transform FindDeep(Transform t, string name)
     {

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Amusnet.Mess;
 using Butterfly.NPC;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,7 +8,9 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Butterfly reproduction ("find a mate"). Wild butterflies, pink with sparkles, wander the village.
 /// Fly up to one to pair: after a short dance it leaves you a brood of babies that follow you as a swarm.
-/// Each baby raises the mess score multiplier (read by GameIntegration) and the village's anger.
+/// Each baby raises the mess score multiplier (read by GameIntegration) and the village's anger, and the
+/// babies make mischief: every so often one flies off to a nearby untouched prop, knocks it over (a real
+/// mess that scores and that villagers notice) and comes back.
 /// Lives on the player.
 /// </summary>
 public sealed class ButterflySwarm : MonoBehaviour
@@ -30,14 +33,38 @@ public sealed class ButterflySwarm : MonoBehaviour
     [SerializeField] float babyScale = 0.3f;
     [SerializeField] Material sparkleMaterial;
 
+    [Header("Baby mischief")]
+    [Tooltip("Babies only go for props this close to the player.")]
+    [SerializeField] float errandRadius = 25f;
+    [Tooltip("Seconds between one baby's errands (random in this range).")]
+    [SerializeField] Vector2 errandInterval = new Vector2(8f, 14f);
+    [SerializeField] float errandSpeed = 6f;
+
+    class Baby
+    {
+        public Transform body;
+        public Interactable target;
+        public bool returning;
+        public float nextErrandAt;
+    }
+
     readonly List<WildButterfly> mates = new List<WildButterfly>();
-    readonly List<Transform> babies = new List<Transform>();
+    readonly List<Baby> babies = new List<Baby>();
+    Interactable[] props;
+    MessManager mess;
+    bool toldMischief;
 
     public int Babies => babies.Count;
+    /// <summary>Messes the babies have made this run.</summary>
+    public int BabyMesses { get; private set; }
     public int MatesLeft => mates.FindAll(m => m != null && !m.Taken).Count;
     public float Multiplier => 1f + babies.Count * multiplierPerBaby;
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        Instance = this;
+        mess = GetComponent<MessManager>();
+    }
 
     void Start() => MapLoader.WhenReady(SpawnMates);
 
@@ -45,7 +72,7 @@ public sealed class ButterflySwarm : MonoBehaviour
     {
         MapLoader.MapReady -= SpawnMates;
         if (Instance == this) Instance = null;
-        foreach (var b in babies) if (b != null) Destroy(b.gameObject);
+        foreach (var b in babies) if (b.body != null) Destroy(b.body.gameObject);
     }
 
     void SpawnMates(Scene map)
@@ -85,7 +112,7 @@ public sealed class ButterflySwarm : MonoBehaviour
         {
             var baby = MakeButterfly("Baby butterfly", babyTint, babyScale);
             baby.transform.position = mate.transform.position + Random.insideUnitSphere * 0.4f;
-            babies.Add(baby.transform);
+            babies.Add(new Baby { body = baby.transform, nextErrandAt = Time.time + Random.Range(errandInterval.x, errandInterval.y) });
             if (AngerLevels.Instance != null) AngerLevels.Instance.AddAgitation(angerPerBaby);
         }
         mate.Leave();
@@ -95,21 +122,75 @@ public sealed class ButterflySwarm : MonoBehaviour
 
     void LateUpdate()
     {
-        // The brood circles the player a little above it, clear of the camera behind.
         float dt = Time.deltaTime;
         if (dt <= 0f) return;
+        bool running = GameFlow.Instance == null || GameFlow.Instance.IsRunning;
         for (int i = 0; i < babies.Count; i++)
         {
             var b = babies[i];
-            if (b == null) continue;
+            if (b.body == null) continue;
+
+            // The brood circles the player a little above it, clear of the camera behind.
             float a = i * 137.5f + Time.time * 50f;
             Vector3 ring = Quaternion.Euler(0f, a, 0f) * Vector3.forward * (1.3f + 0.2f * (i % 3));
-            Vector3 goal = transform.position + ring + Vector3.up * (0.6f + 0.25f * Mathf.Sin(Time.time * 3f + i));
-            Vector3 next = Vector3.Lerp(b.position, goal, 1f - Mathf.Exp(-4f * dt));
-            Vector3 flat = new Vector3(next.x - b.position.x, 0f, next.z - b.position.z);
+            Vector3 home = transform.position + ring + Vector3.up * (0.6f + 0.25f * Mathf.Sin(Time.time * 3f + i));
+
+            if (b.target != null && (!running || b.target.HasInteracted)) { b.target = null; b.returning = true; }
+            if (b.target == null && !b.returning && running && Time.time >= b.nextErrandAt) b.target = PickProp();
+
+            Vector3 next;
+            if (b.target != null)
+            {
+                Vector3 at = b.target.transform.position + Vector3.up * 0.5f;
+                next = Vector3.MoveTowards(b.body.position, at, errandSpeed * dt);
+                if ((next - at).sqrMagnitude < 0.6f) Mischief(b);
+            }
+            else if (b.returning)
+            {
+                next = Vector3.MoveTowards(b.body.position, home, errandSpeed * dt);
+                if ((next - home).sqrMagnitude < 1f)
+                {
+                    b.returning = false;
+                    b.nextErrandAt = Time.time + Random.Range(errandInterval.x, errandInterval.y);
+                }
+            }
+            else next = Vector3.Lerp(b.body.position, home, 1f - Mathf.Exp(-4f * dt));
+
+            Vector3 flat = new Vector3(next.x - b.body.position.x, 0f, next.z - b.body.position.z);
             if (flat.sqrMagnitude > 1e-6f)
-                b.rotation = Quaternion.Slerp(b.rotation, Quaternion.LookRotation(flat), 8f * dt);
-            b.position = next;
+                b.body.rotation = Quaternion.Slerp(b.body.rotation, Quaternion.LookRotation(flat), 8f * dt);
+            b.body.position = next;
+        }
+    }
+
+    // The nearest untouched prop around the player that no other baby is already heading for.
+    Interactable PickProp()
+    {
+        if (props == null) props = FindObjectsByType<Interactable>();
+        Interactable best = null;
+        float bestDist = errandRadius * errandRadius;
+        foreach (var p in props)
+        {
+            if (p == null || !p.isActiveAndEnabled || p.HasInteracted || p.Points <= 0) continue;
+            if (babies.Exists(b => b.target == p)) continue;
+            float d = (p.transform.position - transform.position).sqrMagnitude;
+            if (d < bestDist) { bestDist = d; best = p; }
+        }
+        return best;
+    }
+
+    void Mischief(Baby b)
+    {
+        var prop = b.target;
+        b.target = null;
+        b.returning = true;
+        if (mess == null || !prop.TryInteract(mess)) return;
+        BabyMesses++;
+        VFX.MessPop(prop.transform.position + Vector3.up * 0.5f);
+        if (!toldMischief && GameHUD.Instance != null)
+        {
+            toldMischief = true;
+            GameHUD.Instance.Toast("Your babies are making mischief!", 3f);
         }
     }
 
