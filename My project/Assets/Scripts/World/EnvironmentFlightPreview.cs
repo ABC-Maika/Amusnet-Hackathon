@@ -215,7 +215,21 @@ namespace Amusnet.World
                 focus += cameraBias;
             }
             var pose = cameraPose ? cameraPose : view.transform;
-            pose.position = focus + (marketView ? new Vector3(1.45f + crane * 3.15f, 3.15f + 3.35f * crane, -5.8f - crane * .55f) : new Vector3(0, 4f, -7f));
+            Vector3 offset = marketView
+                ? new Vector3(1.45f + crane * 3.15f, 3.15f + 3.35f * crane, -5.8f - crane * .55f)
+                : new Vector3(0, 4f, -7f);
+            Vector3 position = focus + offset;
+            if (marketView)
+            {
+                // Sweep from above the flight capsule so a hillside, wall, or tree cannot swallow the view.
+                Vector3 anchor = transform.position + Vector3.up * .6f;
+                Vector3 travel = position - anchor;
+                Vector3 direction = travel.normalized;
+                if (Physics.SphereCast(anchor, .22f, direction, out var obstruction, travel.magnitude,
+                    Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                    position = anchor + direction * Mathf.Max(0f, obstruction.distance - .12f);
+            }
+            pose.position = position;
             pose.LookAt(focus + Vector3.forward * 1.8f);
             view.backgroundColor = RenderSettings.fogColor;
         }
