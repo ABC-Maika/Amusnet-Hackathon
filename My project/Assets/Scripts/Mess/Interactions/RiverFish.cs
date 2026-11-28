@@ -11,7 +11,7 @@ namespace Amusnet.Mess
         private enum State { Swim, Stalk, Leap, Fall }
 
         [SerializeField] private Transform model;           // the fish mesh, child of this object
-        [SerializeField] private Vector3 modelEuler = new Vector3(90f, 0f, 0f); // fixes the mesh's own forward axis
+        [SerializeField] private Vector3 modelEuler = new Vector3(90f, 180f, 0f); // fixes the mesh's own forward axis
         [SerializeField] private float waterY = -0.71f;
         [SerializeField] private Vector3 riverMin = new Vector3(-40f, 0f, -23f);
         [SerializeField] private Vector3 riverMax = new Vector3(66f, 0f, -15.5f);

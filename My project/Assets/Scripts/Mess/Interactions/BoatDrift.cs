@@ -30,12 +30,15 @@ namespace Amusnet.Mess
         [SerializeField] private Vector3 swimTo = Vector3.forward;     // direction of the nearest bank
         [SerializeField] private Destructible bridge;                  // the bridge the hull would hit
         [SerializeField] private float slowReach = 10f;                // time slows this close to the rope
+        [SerializeField] private float exitX = 105f;                   // with the bridge gone the boat sails on and leaves the map here
+        [SerializeField] private float lullSeconds = 60f;              // villagers stay away this long after a boat escapes
 
         private static BoatDrift prompting;
         private Transform player;
         private Vector3 ropeEnd, ropeStart;
-        private float seed, speed, surfaceY, kick, cutAt = -10f, locked;
-        private bool drifting, snapped, capsized;
+        private float seed, speed, surfaceY, waterY, kick, cutAt = -10f, locked;
+        private bool drifting, snapped, capsized, escaped;
+        private bool Escaping => drifting && !snapped && bridge && bridge.IsDestroyed;
         private float capsizeAt;
         private float yaw, snapAt;
         private Vector3 halfBowPos, halfSternPos;
@@ -52,7 +55,7 @@ namespace Amusnet.Mess
         private void Awake()
         {
             flow = new Vector3(flow.x, 0f, flow.z).normalized;
-            surfaceY = boat.position.y;
+            surfaceY = waterY = boat.position.y;
             yaw = boat.eulerAngles.y;
             bowLocal = new Vector3(bowLocal.x, 0f, bowLocal.z).normalized;
             if (bowHalf) halfBowPos = bowHalf.localPosition;
@@ -114,17 +117,18 @@ namespace Amusnet.Mess
             {
                 Vector3 push = wind ? wind.Sample(p, Time.time) : Vector3.zero;
                 float target = currentSpeed + Mathf.Max(0f, Vector3.Dot(push, flow)) * windInfluence;
-                if (p.x >= stopX || snapped) target = 0f; // ends against the weir / wrecked at the bridge
+                if ((p.x >= stopX && !Escaping) || snapped) target = 0f; // ends against the weir / wrecked at the bridge
                 // The cut gives the boat a lurch before the current takes over.
                 speed = Mathf.MoveTowards(speed, target + (snapped ? 0f : kick * 0.9f), Time.deltaTime * (snapped ? 2.5f : 1.2f));
                 p += flow * (speed * Time.deltaTime);
                 if (!snapped) p.z = Mathf.Lerp(p.z, RiverLane.ZAt(p.x, laneZ), 1f - Exp(snapped ? 0f : 2f));
                 if (speed < 0.02f && p.x >= stopX) HasArrived = true;
+                if (Escaping && p.x >= stopX) { HasArrived = true; float gy = Terrain.activeTerrain ? Terrain.activeTerrain.SampleHeight(p) + Terrain.activeTerrain.transform.position.y : surfaceY; surfaceY = Mathf.Max(waterY, gy + 0.15f); }
                 // Nose first: turn until the bow points downstream.
                 float want = Mathf.Atan2(flow.x, flow.z) * Mathf.Rad2Deg - Mathf.Atan2(bowLocal.x, bowLocal.z) * Mathf.Rad2Deg;
                 if (!snapped) yaw = Mathf.LerpAngle(yaw, want, 1f - Exp(0.9f));
                 if (!snapped && !capsized && p.x + halfLength * flow.x >= bridgeX && !(bridge && bridge.IsDestroyed)) Snap();
-                if (!snapped && !capsized && p.x >= stopX - 0.5f && bridge && bridge.IsDestroyed) Capsize();
+                if (Escaping && !escaped && p.x >= exitX) Escape();
             }
             if (snapped) AnimateWreck();
             float capRoll = 0f;
@@ -160,6 +164,18 @@ namespace Amusnet.Mess
                     if (c) c.SetParent(Vector3.Dot(boat.InverseTransformPoint(c.position), bowLocal) > 0f ? bowHalf : sternHalf, true);
             foreach (var p in passengers)
                 if (p) { p.transform.SetParent(null, true); p.Swim(surfaceY, swimTo); }
+        }
+
+        // The bridge is gone: the boat sails out of the play area with its villagers, and the village empties for a while.
+        private void Escape()
+        {
+            escaped = true;
+            HasArrived = true;
+            foreach (var p in passengers) if (p) p.gameObject.SetActive(false);
+            boat.gameObject.SetActive(false);
+            if (rope) rope.enabled = false;
+            HudNotice.Show("The boat is gone! The village is empty for a minute.");
+            VillagerLull.Begin(lullSeconds);
         }
 
         // No bridge to break the hull: it rolls over against the weir and everyone aboard is swept into the current.

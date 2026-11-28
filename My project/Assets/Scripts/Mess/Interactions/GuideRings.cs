@@ -8,11 +8,11 @@ namespace Amusnet.Mess
     {
         [SerializeField] private BoatDrift mission;
         [SerializeField] private Material ringMaterial;
-        [SerializeField] private int maxRings = 7;
-        [SerializeField] private float spacing = 4.5f;
+        [SerializeField] private int maxRings = 3;
+        [SerializeField] private float spacing = 7f;
         [SerializeField] private float radius = 2.3f;
         [SerializeField] private float weave = 2.5f;
-        [SerializeField] private float showDistance = 34f;
+        [SerializeField] private float showDistance = 20f; // rings hide when you are farther than this from the rope
 
         private Transform player;
         private LineRenderer[] rings;

@@ -104,6 +104,10 @@ namespace Butterfly.NPC
         public void Unregister(IAngerReactive r) => reactives.Remove(r);
 
         float rawMess, agitation;
+        bool frozen;
+
+        /// <summary>While frozen the tier never changes (e.g. during the villager lull); unfreezing applies what built up.</summary>
+        public bool Frozen { get => frozen; set { frozen = value; if (!value) Apply(); } }
 
         /// <summary>Call with mess score normalised to 0..1 (score / goal).</summary>
         public void SetMess(float normalised)
@@ -122,6 +126,7 @@ namespace Butterfly.NPC
         void Apply()
         {
             Mess = Mathf.Clamp01(rawMess + agitation);
+            if (frozen) return;
 
             AngerTier target = Tier;
             foreach (var t in tiers) if (Mess >= t.threshold) target = t.tier;
