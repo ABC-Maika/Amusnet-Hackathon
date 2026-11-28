@@ -310,8 +310,11 @@ namespace Amusnet.World
             Panel(new Rect(16, 79, 220f * Mathf.Clamp01((float)mess.Score / mess.GoalScore), 3), wheat);
 
             string note = mess.HasReachedGoal ? "Village goal reached" : mess.Score == 0 ? openingHint : "";
-            if (district && (mess.Score == 0 || Time.time < clueUntil) && district.TryGetComponent<MarketDistrict>(out var market))
+            if (district && (!districtChains.ContainsKey(district) || Time.time < clueUntil) &&
+                district.TryGetComponent<MarketDistrict>(out var market))
                 note = market.clue;
+            else if (note.Length == 0 && districtChains.Count < districts.Length)
+                note = "Tab · Find another district";
             if (lastImpact && Time.time < focusedUntil)
             {
                 int count = lastImpact.ChainRoot.ChainLength;

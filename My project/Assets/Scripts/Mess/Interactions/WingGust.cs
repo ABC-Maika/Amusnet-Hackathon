@@ -35,8 +35,8 @@ namespace Amusnet.Mess
             readyAt = Mathf.Max(readyAt, shooedUntil);
         }
         private Transform Candidate => movingCask ? movingCask.Drum : target ? target.transform : null;
-        public string Prompt => IsShooed ? "Spotted!  Fly up or find cover" : movingCask ? "E   Flick the rolling cask" :
-            Time.time < readyAt ? "Gust recovering" : target ? $"E   Gust · {target.name}" : "E   Wing gust";
+        public string Prompt => IsShooed ? "Spotted!  Fly up or find cover" : Time.time < readyAt ? "Gust recovering" :
+            movingCask ? "E   Flick the rolling cask" : target ? $"E   Gust · {target.name}" : "E   Wing gust";
         public float Charge => Mathf.Clamp01(1f - (readyAt - Time.time) / 1.15f);
 
         private void Awake()
