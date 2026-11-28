@@ -14,6 +14,9 @@ public sealed class ButterflyController : MonoBehaviour
     private Vector3 velocity;
     private float yaw;
     private float pitch;
+    private Vector3 visualBase;
+    private float bobBlend;
+    private float wingSpeed = 1f;
 
     public bool IsBoosting { get; private set; }
     public float Speed => motor != null && motor.enabled ? motor.velocity.magnitude : 0f;
@@ -22,6 +25,7 @@ public sealed class ButterflyController : MonoBehaviour
     {
         motor = GetComponent<CharacterController>();
         yaw = transform.eulerAngles.y;
+        if (visual != null) visualBase = visual.localPosition;
         if (settings == null || visual == null)
         {
             Debug.LogError("Assign flight settings and the flight attitude transform to the butterfly.", this);
@@ -55,10 +59,13 @@ public sealed class ButterflyController : MonoBehaviour
         yaw += steer.x * settings.yawSpeed * deltaTime;
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
+        bool idle = settings.hoverWhenIdle && steer.sqrMagnitude < 0.0001f && !boostHeld;
         bool grounded = motor.isGrounded;
         float targetPitch = Mathf.Lerp(settings.neutralDescentPitch,
             steer.y > 0f ? -settings.maximumPitch : settings.maximumPitch, Mathf.Abs(steer.y));
-        if (grounded && steer.y <= 0f)
+        if (idle && !grounded)
+            targetPitch = settings.hoverPitch; // nose slightly up while fluttering on the spot
+        else if (grounded && steer.y <= 0f)
             targetPitch = 0f;
 
         pitch = Mathf.MoveTowards(pitch, targetPitch, settings.pitchSpeed * deltaTime);
@@ -70,6 +77,21 @@ public sealed class ButterflyController : MonoBehaviour
             SetWingAnimation((motor.Move(Vector3.down * deltaTime) & CollisionFlags.Below) == 0);
             velocity = Vector3.zero;
             IsBoosting = false;
+            return;
+        }
+
+        // No input: stop and flutter on the spot (wings keep flapping, a tiny bob keeps it alive).
+        wingSpeed = Mathf.MoveTowards(wingSpeed, idle ? settings.hoverWingSpeed : 1f, 1.5f * deltaTime);
+        if (wings != null) wings.speed = wingSpeed;
+        bobBlend = Mathf.MoveTowards(bobBlend, idle ? 1f : 0f, 3f * deltaTime);
+        visual.localPosition = visualBase + Vector3.up * (Mathf.Sin(Time.time * settings.hoverBobSpeed) * settings.hoverBobHeight * bobBlend);
+        if (idle)
+        {
+            velocity = Vector3.MoveTowards(velocity, Vector3.zero, settings.hoverBrake * deltaTime);
+            motor.Move(velocity * deltaTime);
+            velocity = motor.velocity;
+            IsBoosting = false;
+            SetWingAnimation(true);
             return;
         }
 
