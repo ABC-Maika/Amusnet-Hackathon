@@ -3,7 +3,17 @@ guid: 769e98bda81fe004bad223222d6abba8
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Dark Chitin
+    second: {fileID: 2100000, guid: 955130b164860644993cfe017ba52bb6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Wing Scales
+    second: {fileID: 2100000, guid: f051ace2122edda4883160356dce077b, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
