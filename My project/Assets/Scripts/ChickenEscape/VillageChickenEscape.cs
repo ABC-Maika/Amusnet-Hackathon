@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace Amusnet.ChickenEscape
 {
+    [DefaultExecutionOrder(-50)]
     public sealed class VillageChickenEscape : MonoBehaviour
     {
         const float EntryRange = 3.4f;
@@ -14,17 +15,20 @@ namespace Amusnet.ChickenEscape
         [SerializeField] GameObject yard;
         [SerializeField] Transform entrance;
 
-        MarketEscapeRun session;
+        MarketEscapeRun preparedRun, session;
         GameFlow flow;
         ButterflyController player;
         Camera villageCamera;
         AudioListener villageListener;
-        bool listenerWasEnabled, cursorWasVisible, promptVisible;
+        bool listenerWasEnabled, cursorWasVisible;
+        string activityPrompt = "";
         CursorLockMode cursorLock;
         float timeBeforeEntry, nextEntry;
         int bestRescue, completedThisVisit;
 
         public bool Active => session != null;
+
+        void Awake() => preparedRun = yard.GetComponentInChildren<MarketEscapeRun>(true);
 
         void Update()
         {
@@ -32,24 +36,28 @@ namespace Amusnet.ChickenEscape
             var game = GameFlow.Instance;
             bool canApproach = game != null && game.IsRunning && Time.timeScale > 0f &&
                 Time.unscaledTime >= nextEntry && (!DeathManager.Instance || !DeathManager.Instance.IsDying);
-            if (!canApproach)
+            if (!canApproach || !preparedRun)
             {
-                ShowPrompt(false);
+                ShowPrompt("");
                 return;
             }
 
             if (!player) player = FindAnyObjectByType<ButterflyController>();
-            bool nearby = player && ((player.transform.position - entrance.position).sqrMagnitude <= EntryRange * EntryRange ||
-                (player.transform.position - transform.position).sqrMagnitude <= EntryRange * EntryRange);
-            ShowPrompt(nearby);
-            if (nearby && Keyboard.current?.eKey.wasPressedThisFrame == true) Enter(game);
+            if (!player) return;
+
+            Vector3 position = player.transform.position;
+            bool nearDog = preparedRun.WithinDogReach(position);
+            bool nearEntrance = (position - entrance.position).sqrMagnitude <= EntryRange * EntryRange ||
+                (position - transform.position).sqrMagnitude <= EntryRange * EntryRange;
+            ShowPrompt(nearDog ? "E  ·  Untie the dog" : nearEntrance ? "E  ·  Start Chicken Escape" : "");
+            if ((nearDog || nearEntrance) && Keyboard.current?.eKey.wasPressedThisFrame == true)
+                Enter(game, nearDog ? position : null);
         }
 
-        void Enter(GameFlow game)
+        void Enter(GameFlow game, Vector3? untieFrom)
         {
-            var run = yard.GetComponentInChildren<MarketEscapeRun>(true);
             var camera = Camera.main;
-            if (!run || !camera) return;
+            if (!camera) return;
 
             cursorLock = Cursor.lockState;
             cursorWasVisible = Cursor.visible;
@@ -61,14 +69,14 @@ namespace Amusnet.ChickenEscape
             villageCamera = camera;
             villageListener = camera.GetComponent<AudioListener>();
             listenerWasEnabled = villageListener && villageListener.enabled;
-            ShowPrompt(false);
+            ShowPrompt("");
             player.gameObject.SetActive(false);
             villageCamera.enabled = false;
             if (villageListener) villageListener.enabled = false;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             Time.timeScale = 1f;
-            StartAttempt(run, false);
+            StartAttempt(false, untieFrom);
         }
 
         internal void Retry(MarketEscapeRun run, bool skipBond)
@@ -77,7 +85,7 @@ namespace Amusnet.ChickenEscape
             RememberCompletion(run);
             ReplaceYard();
             Time.timeScale = 1f;
-            StartAttempt(yard.GetComponentInChildren<MarketEscapeRun>(true), skipBond);
+            StartAttempt(skipBond);
         }
 
         internal void Leave(MarketEscapeRun run)
@@ -95,11 +103,11 @@ namespace Amusnet.ChickenEscape
                 completedThisVisit = Mathf.Max(completedThisVisit, run.Saved);
         }
 
-        void StartAttempt(MarketEscapeRun run, bool skipBond)
+        void StartAttempt(bool skipBond, Vector3? untieFrom = null)
         {
-            session = run;
-            run.AttachToVillage(this, skipBond);
-            run.gameObject.SetActive(true);
+            session = preparedRun;
+            session.AttachToVillage(this, skipBond, untieFrom);
+            session.gameObject.SetActive(true);
         }
 
         void ReplaceYard()
@@ -107,6 +115,7 @@ namespace Amusnet.ChickenEscape
             yard.SetActive(false);
             Destroy(yard);
             yard = Instantiate(yardPrefab, transform, false);
+            preparedRun = yard.GetComponentInChildren<MarketEscapeRun>(true);
         }
 
         void RestoreVillage()
@@ -133,16 +142,16 @@ namespace Amusnet.ChickenEscape
             GameHUD.Instance?.Toast(points > 0 ? $"{saved} hens freed  ·  +{points} mess" : $"{saved} hens freed");
         }
 
-        void ShowPrompt(bool show)
+        void ShowPrompt(string prompt)
         {
-            if (promptVisible == show) return;
-            promptVisible = show;
-            if (GameHUD.Instance) GameHUD.Instance.SetActivityPrompt(show ? "E  ·  Start Chicken Escape" : "");
+            if (activityPrompt == prompt) return;
+            activityPrompt = prompt;
+            if (GameHUD.Instance) GameHUD.Instance.SetActivityPrompt(prompt);
         }
 
         void OnDisable()
         {
-            ShowPrompt(false);
+            ShowPrompt("");
             if (Active) RestoreVillage();
         }
     }

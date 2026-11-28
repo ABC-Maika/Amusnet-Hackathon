@@ -167,8 +167,8 @@ namespace Amusnet.ChickenEscape
             };
             (string control, string message) = phase switch
             {
-                MarketEscapeRun.Phase.MeetDog when run.CanUntieDog => ("E", "Loosen the knot."),
-                MarketEscapeRun.Phase.MeetDog => ("", "The keeper tied up the dog."),
+                MarketEscapeRun.Phase.MeetDog when run.CanUntieDog => ("E", "Untie the dog"),
+                MarketEscapeRun.Phase.MeetDog => ("", "The keeper tied up the dog. Fly over to free him."),
                 MarketEscapeRun.Phase.Trust => ("", "He lowers his head and lets you land."),
                 MarketEscapeRun.Phase.Farm when run.CanLeave => ("E", $"Leave with {run.Saved} rescued"),
                 MarketEscapeRun.Phase.Farm when run.CanFreeDog => ("E", "Gust at the keeper to free the dog"),

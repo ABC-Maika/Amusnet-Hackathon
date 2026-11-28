@@ -14,6 +14,8 @@ namespace Amusnet.ChickenEscape
         public const int RescueTarget = 3;
         const float GustCooldown = 8.5f;
         const float CallRange = 6.25f;
+        const float UntieRange = 2.65f;
+        const float UntieHeight = 3.4f;
 
         [SerializeField] EscapeDog dog;
         [SerializeField] EscapeButterfly butterfly;
@@ -30,7 +32,7 @@ namespace Amusnet.ChickenEscape
 
         static bool skipBondOnRetry;
         VillageChickenEscape village;
-        bool skipHostedBond;
+        bool skipHostedBond, untieOnStart;
         int hostedStartFrame = -1;
         bool dragging, laundryMoved, hensInPen = true, loading, dogWasCaught;
         float trustedAt, gustAt, dogGrabbedAt, capturedAt = float.NegativeInfinity;
@@ -58,7 +60,7 @@ namespace Amusnet.ChickenEscape
         public Vector3 CameraTarget => FramingGrab ? (dog.transform.position + keeper.transform.position) * .5f : ActorPosition;
         public Vector3 LookAhead => FramingGrab ? Vector3.zero : IsButterfly ? YardVector(Vector3.forward * .38f) : dog.Velocity * .19f;
         public bool CanUseLatch => Current == Phase.Farm && IsButterfly && gate.CanUnlatch(ActorPosition);
-        public bool CanUntieDog => Current == Phase.MeetDog && (ActorPosition - dog.TetherKnot).sqrMagnitude < 1.9f * 1.9f;
+        public bool CanUntieDog => Current == Phase.MeetDog && WithinDogReach(ActorPosition);
         public bool CanGrabLaundry => dragging || (laundry.position - dog.transform.position).sqrMagnitude < 1.85f * 1.85f;
         public bool Dragging => dragging;
         public bool GateOpen => gate.IsOpen;
@@ -79,11 +81,23 @@ namespace Amusnet.ChickenEscape
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetRetry() => skipBondOnRetry = false;
 
-        internal void AttachToVillage(VillageChickenEscape owner, bool skipBond)
+        internal bool WithinDogReach(Vector3 point)
+        {
+            Vector3 offset = point - dog.Collar;
+            return Mathf.Abs(offset.y) <= UntieHeight &&
+                offset.x * offset.x + offset.z * offset.z <= UntieRange * UntieRange;
+        }
+
+        internal void AttachToVillage(VillageChickenEscape owner, bool skipBond, Vector3? untieFrom)
         {
             village = owner;
             skipHostedBond = skipBond;
             hostedStartFrame = Time.frameCount;
+            if (untieFrom is not Vector3 visitor) return;
+
+            visitor.y = Mathf.Clamp(visitor.y, dog.Collar.y + .18f, YardHeight + 3.65f);
+            butterfly.transform.position = visitor;
+            untieOnStart = true;
         }
 
         void Awake()
@@ -100,6 +114,7 @@ namespace Amusnet.ChickenEscape
             foreach (var hen in flock) hen.BindNavigation(keeper.AgentType);
             if (Current == Phase.MeetDog) dog.Tether(YardVector(new Vector3(1.27f, 0f, -.64f)));
             butterfly.Board();
+            if (untieOnStart && CanUntieDog) UntieDog();
         }
 
         void Update()
