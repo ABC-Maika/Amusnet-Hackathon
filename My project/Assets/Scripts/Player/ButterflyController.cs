@@ -15,7 +15,20 @@ public sealed class ButterflyController : MonoBehaviour
     private float yaw;
     private float pitch;
 
+    private float spotBoost = 1f;
+    private float spotBoostUntil;
+
     public bool IsBoosting { get; private set; }
+
+    /// <summary>Seconds left on a speed boost from the world (e.g. a boost flower); 0 when none.</summary>
+    public float SpotBoostSecondsLeft => Mathf.Max(0f, spotBoostUntil - Time.time);
+
+    /// <summary>Multiplies flight speed by <paramref name="factor"/> for <paramref name="seconds"/>.</summary>
+    public void ApplySpeedBoost(float factor, float seconds)
+    {
+        spotBoost = Mathf.Max(1f, factor);
+        spotBoostUntil = Time.time + Mathf.Max(0f, seconds);
+    }
     public float Speed => motor != null && motor.enabled ? motor.velocity.magnitude : 0f;
 
     private void Awake()
@@ -75,8 +88,9 @@ public sealed class ButterflyController : MonoBehaviour
 
         bool boost = boostHeld && settings.boostSpeed > settings.flightSpeed;
         float speed = boost ? settings.boostSpeed : settings.flightSpeed;
-        Vector3 targetVelocity = visual.forward * speed;
-        velocity = Vector3.MoveTowards(velocity, targetVelocity, settings.acceleration * deltaTime);
+        float world = Time.time < spotBoostUntil ? spotBoost : 1f;
+        Vector3 targetVelocity = visual.forward * (speed * world);
+        velocity = Vector3.MoveTowards(velocity, targetVelocity, settings.acceleration * world * deltaTime);
         CollisionFlags contacts = motor.Move(velocity * deltaTime);
         bool landed = (contacts & CollisionFlags.Below) != 0;
         velocity = landed ? Vector3.zero : motor.velocity;

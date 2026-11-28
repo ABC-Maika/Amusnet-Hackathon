@@ -18,8 +18,17 @@ public class MapLoader : MonoBehaviour
              "empty band past the map edge blends into the haze from the high menu camera.")]
     [SerializeField] Material skyOverride;
 
+    /// <summary>The loaded, prepared map; invalid until MapReady has fired.</summary>
+    public static Scene ReadyMap { get; private set; }
+    /// <summary>Fires once the map is loaded and prepared (player on its spawn point).</summary>
+    public static event System.Action<Scene> MapReady;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { ReadyMap = default; MapReady = null; }
+
     void Awake()
     {
+        ReadyMap = default;
         if (SceneManager.GetSceneByName(mapScene).isLoaded) Prepare(SceneManager.GetSceneByName(mapScene));
         else
         {
@@ -71,6 +80,15 @@ public class MapLoader : MonoBehaviour
             player.SetPositionAndRotation(spawn.position, spawn.rotation);
             if (motor != null) motor.enabled = true;
         }
+        ReadyMap = map;
+        MapReady?.Invoke(map);
+    }
+
+    /// <summary>Runs <paramref name="onReady"/> now if the map is ready, otherwise once it is.</summary>
+    public static void WhenReady(System.Action<Scene> onReady)
+    {
+        if (ReadyMap.IsValid() && ReadyMap.isLoaded) onReady(ReadyMap);
+        else MapReady += onReady;
     }
 
     static Transform FindDeep(Transform t, string name)

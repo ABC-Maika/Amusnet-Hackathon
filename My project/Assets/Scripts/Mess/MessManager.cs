@@ -37,10 +37,17 @@ namespace Amusnet.Mess
             startedAt ??= Time.timeAsDouble;
         }
 
+        /// <summary>Multiplies the points of each new mess (village anger, butterfly brood). 1 = none.</summary>
+        public float Multiplier { get; set; } = 1f;
+
+        /// <summary>Points a new mess worth <paramref name="basePoints"/> scores with the current multiplier.</summary>
+        public int Multiplied(float basePoints) => Mathf.Max(0, Mathf.RoundToInt(basePoints * Mathf.Max(0f, Multiplier)));
+
         internal void RecordInteraction(Interactable source)
         {
-            AddMess(source.Points);
-            MessCreated?.Invoke(source, source.Points);
+            int points = Multiplied(source.Points);
+            AddMess(points);
+            MessCreated?.Invoke(source, points);
         }
 
         public void AddMess(int points)
