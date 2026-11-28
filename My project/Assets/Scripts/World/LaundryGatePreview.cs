@@ -134,7 +134,7 @@ namespace Amusnet.World
         {
             stumbleProgress = Mathf.Clamp01(stumbleProgress + Time.deltaTime / 0.65f);
             float slide = Mathf.SmoothStep(0f, 1f, stumbleProgress);
-            walkPlayback = 1.55f * Mathf.Sin(Mathf.PI * stumbleProgress);
+            walkPlayback = 1.55f * Mathf.Max(0f, Mathf.Sin(Mathf.PI * stumbleProgress));
             villager.position = Vector3.Lerp(stumbleStart, stumbleEnd, slide);
             villager.rotation = stumbleFacing * Quaternion.Euler(0f, 0f, -23f * Mathf.Sin(Mathf.PI * stumbleProgress));
             if (stumbleProgress < 1f)
