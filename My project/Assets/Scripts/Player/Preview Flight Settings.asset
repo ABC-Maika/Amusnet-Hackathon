@@ -18,7 +18,7 @@ MonoBehaviour:
   neutralDescentPitch: 7
   flightSpeed: 2.1
   boostSpeed: 4.2
-  acceleration: 12
+  acceleration: 2.4
   hoverWhenIdle: 1
   hoverBobHeight: 0.04
   hoverBobSpeed: 2.4

@@ -1,4 +1,5 @@
 using Amusnet.World;
+using System.Linq;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,8 +19,17 @@ public class MapLoader : MonoBehaviour
              "empty band past the map edge blends into the haze from the high menu camera.")]
     [SerializeField] Material skyOverride;
 
+    /// <summary>The loaded, prepared map; invalid until MapReady has fired.</summary>
+    public static Scene ReadyMap { get; private set; }
+    /// <summary>Fires once the map is loaded and prepared (player on its spawn point).</summary>
+    public static event System.Action<Scene> MapReady;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { ReadyMap = default; MapReady = null; }
+
     void Awake()
     {
+        ReadyMap = default;
         if (SceneManager.GetSceneByName(mapScene).isLoaded) Prepare(SceneManager.GetSceneByName(mapScene));
         else
         {
@@ -48,10 +58,10 @@ public class MapLoader : MonoBehaviour
         var roots = map.GetRootGameObjects();
         foreach (var root in roots)
         {
-            // This scene owns the player and the cameras: switch off the map's own preview rig
-            // (its butterfly, follow camera, pollen trail and cameras) so there is only one of each.
-            if (root.GetComponentInChildren<ButterflyController>(true) || root.GetComponentInChildren<EnvironmentFlightPreview>(true) ||
-                root.GetComponentInChildren<CinemachineCamera>(true) || root.GetComponentInChildren<ButterflyPollen>(true))
+            // This scene owns the player, the cameras and the game systems: switch off the map's own copies
+            // (a preview butterfly rig, or a death/anger/predator setup for testing the map alone) so there
+            // is only one of each.
+            if (OwnedHere.Any(type => root.GetComponentInChildren(type, true)))
             {
                 root.SetActive(false);
                 continue;
@@ -71,7 +81,23 @@ public class MapLoader : MonoBehaviour
             player.SetPositionAndRotation(spawn.position, spawn.rotation);
             if (motor != null) motor.enabled = true;
         }
+        ReadyMap = map;
+        MapReady?.Invoke(map);
     }
+
+    /// <summary>Runs <paramref name="onReady"/> now if the map is ready, otherwise once it is.</summary>
+    public static void WhenReady(System.Action<Scene> onReady)
+    {
+        if (ReadyMap.IsValid() && ReadyMap.isLoaded) onReady(ReadyMap);
+        else MapReady += onReady;
+    }
+
+    static readonly System.Type[] OwnedHere =
+    {
+        typeof(ButterflyController), typeof(EnvironmentFlightPreview), typeof(CinemachineCamera), typeof(ButterflyPollen),
+        typeof(Butterfly.NPC.AngerLevels), typeof(Butterfly.Death.PredatorMeter), typeof(Butterfly.Death.PredatorBird),
+        typeof(Butterfly.UI.DeathHud), typeof(Butterfly.UI.PauseMenu), typeof(UnityEngine.EventSystems.EventSystem),
+    };
 
     static Transform FindDeep(Transform t, string name)
     {

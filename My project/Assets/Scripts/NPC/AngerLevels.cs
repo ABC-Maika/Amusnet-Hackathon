@@ -53,15 +53,17 @@ namespace Butterfly.NPC
             public float speedMultiplier = 1f;
             [Tooltip("How far villagers notice the butterfly at this tier.")]
             public float noticeRadius = 8f;
+            [Tooltip("Multiplies the points of each new mess while the village is this angry.")]
+            public float scoreMultiplier = 1f;
         }
 
         [Header("Tiers (ordered by threshold)")]
         public List<TierSettings> tiers = new List<TierSettings>
         {
             new TierSettings { tier = AngerTier.Calm,    threshold = 0f,    tools = AngerTools.None,                                                        speedMultiplier = 1f,   noticeRadius = 8f  },
-            new TierSettings { tier = AngerTier.Annoyed, threshold = 0.25f, tools = AngerTools.Swatter,                                                     speedMultiplier = 1.1f, noticeRadius = 10f },
-            new TierSettings { tier = AngerTier.Angry,   threshold = 0.55f, tools = AngerTools.Swatter | AngerTools.Net | AngerTools.CloseWindows,         speedMultiplier = 1.25f, noticeRadius = 13f },
-            new TierSettings { tier = AngerTier.Furious, threshold = 0.8f,  tools = AngerTools.Swatter | AngerTools.Net | AngerTools.Trap | AngerTools.CloseWindows | AngerTools.CloseGates, speedMultiplier = 1.4f, noticeRadius = 16f },
+            new TierSettings { tier = AngerTier.Annoyed, threshold = 0.25f, tools = AngerTools.Swatter,                                                     speedMultiplier = 1.1f, noticeRadius = 10f, scoreMultiplier = 1.25f },
+            new TierSettings { tier = AngerTier.Angry,   threshold = 0.55f, tools = AngerTools.Swatter | AngerTools.Net | AngerTools.CloseWindows,         speedMultiplier = 1.25f, noticeRadius = 13f, scoreMultiplier = 1.5f },
+            new TierSettings { tier = AngerTier.Furious, threshold = 0.8f,  tools = AngerTools.Swatter | AngerTools.Net | AngerTools.Trap | AngerTools.CloseWindows | AngerTools.CloseGates, speedMultiplier = 1.4f, noticeRadius = 16f, scoreMultiplier = 2f },
         };
 
         [Tooltip("If true the tier can drop again when the mess score drops. Default: anger never cools down.")]
@@ -77,6 +79,7 @@ namespace Butterfly.NPC
         public AngerTools Tools => Current.tools;
         public float SpeedMultiplier => Current.speedMultiplier;
         public float NoticeRadius => Current.noticeRadius;
+        public float ScoreMultiplier => Current.scoreMultiplier;
 
         readonly List<IAngerReactive> reactives = new List<IAngerReactive>();
 
@@ -100,10 +103,25 @@ namespace Butterfly.NPC
 
         public void Unregister(IAngerReactive r) => reactives.Remove(r);
 
+        float rawMess, agitation;
+
         /// <summary>Call with mess score normalised to 0..1 (score / goal).</summary>
         public void SetMess(float normalised)
         {
-            Mess = Mathf.Clamp01(normalised);
+            rawMess = Mathf.Clamp01(normalised);
+            Apply();
+        }
+
+        /// <summary>Raises anger on top of the mess score (0..1 of the bar), e.g. when the butterflies multiply.</summary>
+        public void AddAgitation(float amount)
+        {
+            agitation = Mathf.Max(0f, agitation + amount);
+            Apply();
+        }
+
+        void Apply()
+        {
+            Mess = Mathf.Clamp01(rawMess + agitation);
 
             AngerTier target = Tier;
             foreach (var t in tiers) if (Mess >= t.threshold) target = t.tier;
@@ -123,7 +141,7 @@ namespace Butterfly.NPC
         /// <summary>Reset for a new run.</summary>
         public void ResetAnger()
         {
-            Mess = 0f;
+            Mess = rawMess = agitation = 0f;
             var previous = Tier;
             Tier = AngerTier.Calm;
             if (previous == Tier) return;

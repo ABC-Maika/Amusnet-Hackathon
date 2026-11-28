@@ -11,6 +11,7 @@ namespace Butterfly.Death
     ///  - RebelAnimal.AllyMess -> MessManager.AddMess (allies' chaos counts as mess)
     ///  - DeathManager.DeathFinished -> GameFlow.Lose()
     ///  - MessManager goal reached -> GameFlow.Win(); messes score only while GameFlow.IsRunning
+    ///  - AngerLevels tier multiplier x ButterflySwarm brood multiplier -> MessManager.Multiplier and the HUD
     /// Created automatically after every scene load; nothing to place by hand.
     /// </summary>
     public sealed class GameIntegration : MonoBehaviour
@@ -55,6 +56,12 @@ namespace Butterfly.Death
                 allyRemainder = 0f;
                 OnScore(mess.Score);
             }
+            // Each new mess is worth more when the village is angrier and the brood is bigger.
+            float anger = AngerLevels.Instance != null ? AngerLevels.Instance.ScoreMultiplier : 1f;
+            float brood = ButterflySwarm.Instance != null ? ButterflySwarm.Instance.Multiplier : 1f;
+            mess.Multiplier = anger * brood;
+            if (GameHUD.Instance != null) GameHUD.Instance.SetMultiplier(mess.Multiplier);
+
             // Messes only score during live play; the run clock starts on Play.
             var flow = GameFlow.Instance;
             if (flow == null) return;
@@ -75,13 +82,16 @@ namespace Butterfly.Death
             if (AngerLevels.Instance != null) AngerLevels.Instance.SetMess(normalised);
             if (GameHUD.Instance != null) GameHUD.Instance.SetMess(normalised);
             // Enough mess drives the villagers out: the run is won.
-            if (mess.HasReachedGoal && GameFlow.Instance != null && GameFlow.Instance.IsRunning) GameFlow.Instance.Win();
+            // (Not while dying: the martyr's landing blast can push the score over, but the run is lost.)
+            bool dying = DeathManager.Instance != null && DeathManager.Instance.IsDying;
+            if (mess.HasReachedGoal && !dying && GameFlow.Instance != null && GameFlow.Instance.IsRunning) GameFlow.Instance.Win();
         }
 
         void OnAllyMess(RebelAnimal ally, float amount)
         {
             if (mess == null || amount <= 0f) return;
-            allyRemainder += amount;
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) return;
+            allyRemainder += amount * mess.Multiplier;
             int whole = Mathf.FloorToInt(allyRemainder);
             if (whole <= 0) return;
             allyRemainder -= whole;

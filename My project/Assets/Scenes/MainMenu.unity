@@ -8326,11 +8326,12 @@ MonoBehaviour:
   riseWhileFlying: 1.5
   fallWhileHidden: 30
   fallWhileResting: 6
+  onlyHidingSpotsHelp: 1
   flyingSpeed: 0.6
   landOnFlowerAt: 55
   hideAt: 80
   arrivalSeconds: 10
-  holdHToHide: 1
+  holdHToHide: 0
 --- !u!4 &228914929
 Transform:
   m_ObjectHideFlags: 0
@@ -34965,7 +34966,7 @@ MonoBehaviour:
   steerFillRect: {fileID: 787594798}
   legacyPopupGroup: {fileID: 409447353}
   legacyPopupText: {fileID: 1606651423}
-  landOnFlowerMessage: You are tired!  Land on a flower, or the predator will catch you.
+  landOnFlowerMessage: You are tired!  Hide in a flower or a tree, or the predator will catch you.
   hideMessage: HIDE NOW!  The predator is diving for you.
 --- !u!114 &703960901
 MonoBehaviour:
@@ -62349,6 +62350,66 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &1467278687
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1467278688}
+  - component: {fileID: 1467278689}
+  m_Layer: 0
+  m_Name: Nature Spots
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1467278688
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1467278687}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2132117484}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1467278689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1467278687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: decd431f405df364487b83de84ad5b82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NatureSpots
+  player: {fileID: 1684217539}
+  treePrefixes:
+  - Tree_
+  - Pine Tree_
+  flowerPrefixes:
+  - Flower_
+  boostShare: 0.35
+  boostFactor: 1.7
+  boostSeconds: 4
+  rechargeSeconds: 20
+  hideMaterial: {fileID: 2100000, guid: 11623797f7887e7489bd6d88bbd5f978, type: 2}
+  boostMaterial: {fileID: 2100000, guid: f5c0133f18629884ca89a28913d08c05, type: 2}
+  hideColor: {r: 0.62, g: 0.85, b: 1, a: 0.95}
+  boostColor: {r: 1, g: 0.8, b: 0.3, a: 1}
+  markersPerKind: 16
+  markerRange: 40
 --- !u!1 &1472946127
 GameObject:
   m_ObjectHideFlags: 0
@@ -67461,6 +67522,7 @@ GameObject:
   - component: {fileID: 1684217540}
   - component: {fileID: 1684217544}
   - component: {fileID: 1684217545}
+  - component: {fileID: 1684217546}
   m_Layer: 2
   m_Name: Butterfly Player
   m_TagString: Untagged
@@ -67584,6 +67646,35 @@ MonoBehaviour:
   gust: {fileID: 1970714952}
   sound: {fileID: 1970714950}
   reach: 5.8
+--- !u!114 &1684217546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1684217538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35d191a464b79db4e8de7420b08d8943, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButterflySwarm
+  butterflyModel: {fileID: 9071840465131171984, guid: 9beca742c83e77445b8903d243362355, type: 3}
+  mateHomes:
+  - {fileID: 469159806}
+  - {fileID: 1206262810}
+  - {fileID: 321237964}
+  - {fileID: 1862063357}
+  - {fileID: 506536654}
+  wanderRadius: 10
+  pairRadius: 2.5
+  pairSeconds: 1.6
+  babiesPerMate: 2
+  multiplierPerBaby: 0.1
+  angerPerBaby: 0.03
+  mateTint: {r: 1, g: 0.55, b: 0.75, a: 1}
+  babyTint: {r: 1, g: 0.7, b: 0.85, a: 1}
+  babyScale: 0.3
+  sparkleMaterial: {fileID: 2100000, guid: f5c0133f18629884ca89a28913d08c05, type: 2}
 --- !u!1 &1689595053
 GameObject:
   m_ObjectHideFlags: 0
@@ -76138,21 +76229,25 @@ MonoBehaviour:
     tools: 0
     speedMultiplier: 1
     noticeRadius: 8
+    scoreMultiplier: 1
   - tier: 1
     threshold: 0.25
     tools: 1
     speedMultiplier: 1.1
     noticeRadius: 10
+    scoreMultiplier: 1.25
   - tier: 2
     threshold: 0.55
     tools: 11
     speedMultiplier: 1.25
     noticeRadius: 13
+    scoreMultiplier: 1.5
   - tier: 3
     threshold: 0.8
     tools: 31
     speedMultiplier: 1.4
     noticeRadius: 16
+    scoreMultiplier: 2
   canCoolDown: 0
   onTierChanged:
     m_PersistentCalls:
@@ -84001,6 +84096,7 @@ Transform:
   - {fileID: 700714077}
   - {fileID: 703960904}
   - {fileID: 454722364}
+  - {fileID: 1467278688}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
