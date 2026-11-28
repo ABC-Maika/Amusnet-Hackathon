@@ -7977,6 +7977,7 @@ MonoBehaviour:
   restSpot: {x: 0.17186761, y: 1.1731166, z: 76.17423}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -15535,6 +15536,7 @@ MonoBehaviour:
   restSpot: {x: 69.12307, y: 1.7917851, z: -51.5178}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -16354,6 +16356,7 @@ MonoBehaviour:
   restSpot: {x: -20.910393, y: 0.024983669, z: 21.441967}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -19713,6 +19716,7 @@ MonoBehaviour:
   restSpot: {x: 64.60627, y: 2.043615, z: 28.860455}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -22484,6 +22488,7 @@ MonoBehaviour:
   restSpot: {x: -18.039963, y: 3.8958757, z: -68.786705}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -34843,57 +34848,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 700661660}
   m_Mesh: {fileID: -2432090755550338912, guid: 1b1f0833f0d775b9eb4ce906ae7a53ca, type: 3}
---- !u!1 &700714075
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 700714077}
-  - component: {fileID: 700714076}
-  m_Layer: 0
-  m_Name: SpiritTrail
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &700714076
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 700714075}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6e5c6ca47119fbf48bc5cd117b03c753, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Butterfly.Animals.SpiritTrail
-  player: {fileID: 0}
-  legacyPerSpot: 25
-  maxSpots: 4
-  orbSpeed: 6
-  orbHeight: 2.5
-  waitDistance: 12
-  color: {r: 0.6, g: 0.9, b: 1, a: 1}
---- !u!4 &700714077
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 700714075}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2132117484}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &703960899
 GameObject:
   m_ObjectHideFlags: 0
@@ -41177,7 +41131,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -118}
+  m_AnchoredPosition: {x: 0, y: -24}
   m_SizeDelta: {x: 480, y: 66}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &798576622
@@ -49859,6 +49813,7 @@ MonoBehaviour:
   restSpot: {x: -81.505325, y: 1.8965782, z: -46.746098}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -50980,71 +50935,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1166725339}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1001 &1166939051
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 630654783416604700, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3592391725849291708, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: m_Name
-      value: PredatorSystem
-      objectReference: {fileID: 0}
-    - target: {fileID: 4730462799662725145, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: player
-      value: 
-      objectReference: {fileID: 1684217539}
-    - target: {fileID: 4730462799662725145, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
-      propertyPath: risePerSecond
-      value: 0.75
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 8a7b7c6722de8ca44b2a0610d7f6c8f1, type: 3}
 --- !u!1001 &1168319488
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -61929,7 +61819,7 @@ MonoBehaviour:
   downwardTilt: 20.6
   mouseSensitivity: 0.18
   maximumTurnLean: 7
-  boostPullback: 1.15
+  boostPullback: 0.345
   motionResponse: 5
 --- !u!114 &1445940226
 MonoBehaviour:
@@ -62027,12 +61917,12 @@ MonoBehaviour:
   TransparentLayers:
     serializedVersion: 2
     m_Bits: 0
-  MinimumDistanceFromTarget: 0.3
+  MinimumDistanceFromTarget: 0.09
   AvoidObstacles:
     Enabled: 1
     DistanceLimit: 0
     MinimumOcclusionTime: 0
-    CameraRadius: 0.24
+    CameraRadius: 0.072000004
     UseFollowTarget:
       Enabled: 0
       YOffset: 0
@@ -62065,7 +61955,7 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 1.8, z: -4.8}
+  FollowOffset: {x: 0, y: 0.54, z: -1.44}
 --- !u!4 &1445940230
 Transform:
   m_ObjectHideFlags: 0
@@ -67540,7 +67430,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 2.2, z: -8}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1849827311}
@@ -67666,15 +67556,19 @@ MonoBehaviour:
   - {fileID: 1862063357}
   - {fileID: 506536654}
   wanderRadius: 10
-  pairRadius: 2.5
+  pairRadius: 1.5
   pairSeconds: 1.6
   babiesPerMate: 2
   multiplierPerBaby: 0.1
   angerPerBaby: 0.03
   mateTint: {r: 1, g: 0.55, b: 0.75, a: 1}
   babyTint: {r: 1, g: 0.7, b: 0.85, a: 1}
-  babyScale: 0.3
+  mateScale: 0.3
+  babyScale: 0.15
   sparkleMaterial: {fileID: 2100000, guid: f5c0133f18629884ca89a28913d08c05, type: 2}
+  errandRadius: 25
+  errandInterval: {x: 8, y: 14}
+  errandSpeed: 6
 --- !u!1 &1689595053
 GameObject:
   m_ObjectHideFlags: 0
@@ -82019,7 +81913,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1998195013
 RectTransform:
   m_ObjectHideFlags: 0
@@ -82274,6 +82168,7 @@ MonoBehaviour:
   restSpot: {x: -76.42948, y: 4.248091, z: 16.088388}
   hearingRadius: 12
   chaseRadius: 9
+  wanderRadius: 7
   expressiveRig: 1
   swingWindUp: 0.45
   swingReach: 2.2
@@ -84093,7 +83988,6 @@ Transform:
   - {fileID: 1931401660}
   - {fileID: 228914929}
   - {fileID: 1285568477}
-  - {fileID: 700714077}
   - {fileID: 703960904}
   - {fileID: 454722364}
   - {fileID: 1467278688}
@@ -84106,7 +84000,6 @@ SceneRoots:
   - {fileID: 330585546}
   - {fileID: 1410872958}
   - {fileID: 983773791}
-  - {fileID: 1166939051}
   - {fileID: 1702558978}
   - {fileID: 686498402}
   - {fileID: 1684217539}

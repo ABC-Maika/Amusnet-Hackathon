@@ -173,7 +173,6 @@ namespace Butterfly.Death
             float legacy = (baseLegacy + messValue * legacyPerMessValue) * cause.legacyMultiplier
                            * LegacyBank.AllyMultiplier(Butterfly.Animals.RebelAnimal.TotalAllyBonus());
             LegacyBank.Add(legacy);
-            LegacyBank.RecordDeathPoint(point);
             cause.OnDeathLanded(butterfly, point);
             LegacyAwarded?.Invoke(legacy);
             onLegacyAwarded?.Invoke(legacy);

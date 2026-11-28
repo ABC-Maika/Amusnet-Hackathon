@@ -36,7 +36,7 @@ Hazard locations (web, lamp, pond) are marked by the Sprint 2 [E] task. Place at
 - **Per next run:** mess score is multiplied by `1 + 0.01 x total legacy`, capped at x2.0 (cap reached at 100 legacy, about 4 to 6 deaths).
 - **Cap reason:** the goal is about 15 minutes per run (Sprint 3 [E]); the bonus shortens it but cannot trivialise it.
 - **Display:** after landing the HUD shows `Legacy +N`, and the run start screen shows the current multiplier.
-- **Spirit trail (Sprint 4 [D]):** the next run starts with a ghost trail leading to the previous death's best mess spots. Trail length grows with total legacy (one extra spot per 25 legacy, max 4).
+- **Spirit trail (Sprint 4 [D]):** removed; the next run no longer gets a guide to earlier death spots.
 
 ## Open questions for the team
 - Should legacy reset after a win? (proposal: keep it, a win ends the campaign anyway)

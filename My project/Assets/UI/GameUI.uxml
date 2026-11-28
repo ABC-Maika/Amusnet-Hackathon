@@ -13,7 +13,6 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:Label name="messValue" text="0%" class="mess-value" />
-                <ui:Label name="messMultiplier" text="×1" class="mess-mult mess-mult--off" />
             </ui:VisualElement>
             <ui:VisualElement name="predator" class="hud-card predator" picking-mode="Ignore">
                 <b:RadialMeter name="predatorMeter" class="predator-meter" picking-mode="Ignore"
@@ -22,6 +21,7 @@
                 </b:RadialMeter>
                 <ui:Label text="PREDATOR" class="hud-caption" />
             </ui:VisualElement>
+            <ui:Label name="messMultiplier" text="×1" class="mess-mult mess-mult--off" />
             <ui:Label name="coverStatus" text="" class="cover-status cover-status--off" />
             <ui:Label name="toast" text="" class="hud-toast hud-toast--off" />
             <ui:Label text="Esc to pause" class="hud-hint" />

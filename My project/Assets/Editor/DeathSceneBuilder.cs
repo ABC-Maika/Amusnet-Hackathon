@@ -94,7 +94,7 @@ public static class DeathSceneBuilder
         Debug.Log("[Death] Test scene populated and saved. Press Play, fly, press K to die.");
     }
 
-    [MenuItem("Death/Add Sim Animals, Frog and Spirit Trail")]
+    [MenuItem("Death/Add Sim Animals and Frog")]
     static void AddAnimalsAndFrog()
     {
         var root = new GameObject("SimAnimalsAndKillers");
@@ -112,12 +112,9 @@ public static class DeathSceneBuilder
 
         PlaceFrog(root.scene);
 
-        if (Object.FindFirstObjectByType<Butterfly.Animals.SpiritTrail>() == null)
-            new GameObject("SpiritTrail").AddComponent<Butterfly.Animals.SpiritTrail>();
-
         EditorSceneManager.MarkSceneDirty(root.scene);
         EditorSceneManager.SaveScene(root.scene);
-        Debug.Log("[Death] Added the sim animals, pond frog and spirit trail.");
+        Debug.Log("[Death] Added the sim animals and pond frog.");
     }
 
     internal static GameObject PlaceFrog(UnityEngine.SceneManagement.Scene scene)

@@ -287,7 +287,8 @@ namespace Amusnet.World
             float far = Vector3.Distance(villager.position, butterfly.position);
             MoveToward(flat, chaseSpeed, dt);
 
-            bool hidden = HidingZone.IsHidden(butterfly.position);
+            var shelter = butterfly.GetComponentInParent<Amusnet.World.ShelterState>();
+            bool hidden = shelter != null && shelter.IsHidden;
             if (far > loseInterestDistance || hidden || phaseTime > 25f)
             {
                 Say(hidden ? "Where did it go?" : "Bah!", Color.white, 1.6f);
@@ -338,7 +339,9 @@ namespace Amusnet.World
 
         void UpdateEmbers(float dt)
         {
-            // Villager keeps chasing the butterfly (or stands by the fire) while the gust blows.
+            // The villager stands and watches the embers fly while the gust blows (no walk cycle on the spot).
+            Play("Watch");
+            FaceTarget(villager, houseTop);
             Vector3 dir = houseTop - firePos; dir.y = 0f;
             flames.rotation = Quaternion.Slerp(flames.rotation, Quaternion.FromToRotation(Vector3.up, Vector3.up + dir.normalized * 0.9f), 4f * dt);
 
@@ -453,7 +456,7 @@ namespace Amusnet.World
                 Ground(h.t);
                 if (h.bucket) h.bucket.position = h.t.position + h.t.forward * 0.4f + h.t.right * 0.25f + Vector3.up * 0.9f;
             }
-            if (carryingBucket && Vector3.Distance(villager.position, houseDoor) < 0.6f) rate += 1f;
+            // (The villager's own bucket is counted in UpdateBurning, not here.)
             douse += rate * dt;
             if (douse >= douseSeconds) PutOut();
         }
@@ -576,6 +579,7 @@ namespace Amusnet.World
         void Burn()
         {
             phase = Phase.Burned;
+            ClearHelpers(); // TickHelpers stops once burned: the bucket crew would freeze at the door
             Say("Noooo!", new Color(1f, 0.35f, 0.25f), 4f);
             TaskPanel.Complete(EmberTask);
             fallbackLine = "";

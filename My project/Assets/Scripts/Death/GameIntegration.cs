@@ -10,6 +10,7 @@ namespace Butterfly.Death
     ///  - MessManager score  -> AngerLevels.SetMess(score / goal) and GameHUD.SetMess
     ///  - RebelAnimal.AllyMess -> MessManager.AddMess (allies' chaos counts as mess)
     ///  - DeathManager.DeathFinished -> GameFlow.Lose()
+    ///  - PredatorMeter.Percent -> GameHUD.SetPredator
     ///  - MessManager goal reached -> GameFlow.Win(); messes score only while GameFlow.IsRunning
     ///  - AngerLevels tier multiplier x ButterflySwarm brood multiplier -> MessManager.Multiplier and the HUD
     /// Created automatically after every scene load; nothing to place by hand.
@@ -47,6 +48,9 @@ namespace Butterfly.Death
 
         void Update()
         {
+            // The HUD's predator ring shows the predator meter.
+            if (PredatorMeter.Instance != null && GameHUD.Instance != null) GameHUD.Instance.SetPredator(PredatorMeter.Instance.Percent);
+
             // Scenes reload on restart, so re-find the MessManager whenever it changes.
             if (mess == null)
             {

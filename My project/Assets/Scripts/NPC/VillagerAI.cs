@@ -19,6 +19,8 @@ namespace Amusnet.NPC
         [SerializeField] private Vector3 restSpot;
         [SerializeField] private float hearingRadius = 12f;
         [SerializeField] private float chaseRadius = 9f;
+        [SerializeField, Tooltip("Rest breaks wander to a random spot this far around the rest spot, so the village feels alive.")]
+        private float wanderRadius = 7f;
 
         public Activity CurrentActivity { get; private set; }
         private NavMeshAgent agent;
@@ -46,6 +48,14 @@ namespace Amusnet.NPC
         private float swingAt, nextTrapAt;
         private int liveTraps;
 
+        // Animator states, looked up once (a rig missing one falls back to "Watch").
+        private static readonly int WalkState = Animator.StringToHash("Base Layer.Walk");
+        private static readonly int WatchState = Animator.StringToHash("Base Layer.Watch");
+        private int startleState, sortState, protestState;
+
+        /// <summary>Villagers only react to the butterfly during live play (not on menus, while paused, in the win cinematic or after the run).</summary>
+        private static bool Live => !GameFlow.Instance || GameFlow.Instance.IsRunning;
+
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -54,10 +64,31 @@ namespace Amusnet.NPC
             view = Camera.main;
             modelPosition = animator.transform.localPosition;
             modelRotation = animator.transform.localRotation;
+            startleState = StateOr("Base Layer.Startle");
+            sortState = StateOr("Base Layer.Sort goods");
+            protestState = StateOr("Base Layer.Protest");
         }
 
-        private void OnEnable() => mess.MessCreated += Notice;
-        private void OnDisable() => mess.MessCreated -= Notice;
+        private int StateOr(string path)
+        {
+            int hash = Animator.StringToHash(path);
+            return !expressiveRig || animator.HasState(0, hash) ? hash : WatchState;
+        }
+
+        private void OnEnable()
+        {
+            mess.MessCreated += Notice;
+            AngerLevels.TierChanged += OnTierChanged;
+        }
+
+        private void OnDisable()
+        {
+            mess.MessCreated -= Notice;
+            AngerLevels.TierChanged -= OnTierChanged;
+        }
+
+        // A villager mid-chase picks up the new tool as soon as the village gets angrier.
+        private void OnTierChanged(AngerTier tier, AngerTier previous) => UpdateToolVisibility();
 
         private void Start()
         {
@@ -68,7 +99,7 @@ namespace Amusnet.NPC
 
         private void Notice(Interactable source, int amount)
         {
-            if (!agent.isOnNavMesh || !source
+            if (!Live || !agent.isOnNavMesh || !source
                 || (source.transform.position - transform.position).sqrMagnitude > HearingRadius * HearingRadius) return;
             if (expressiveRig && Time.time >= takeNoticeAfter)
             {
@@ -83,6 +114,8 @@ namespace Amusnet.NPC
         private void Update()
         {
             if (!agent.isOnNavMesh) return;
+            // Outside live play nobody keeps hunting the butterfly: back to the everyday routine.
+            if (!Live && CurrentActivity is Activity.Investigating or Activity.Chasing) SetActivity(Activity.Idle, 2f);
             remaining -= Time.deltaTime;
             switch (CurrentActivity)
             {
@@ -118,7 +151,8 @@ namespace Amusnet.NPC
                         if (Time.time >= swingAt) Swing();
                         break;
                     }
-                    if (CanSeeButterfly())
+                    bool sees = CanSeeButterfly(); // one line-of-sight check per frame
+                    if (sees)
                     {
                         Vector3 offset = mess.transform.position - transform.position;
                         TryPlaceTrap();
@@ -140,7 +174,7 @@ namespace Amusnet.NPC
                             }
                         }
                     }
-                    if (remaining <= 0f || !CanSeeButterfly())
+                    if (remaining <= 0f || !sees)
                     {
                         SetActivity(Activity.Complaining, 2.4f);
                         break;
@@ -266,7 +300,13 @@ namespace Amusnet.NPC
         private void BeginRoutine()
         {
             SetActivity(Activity.Walking, 12f);
-            if (!WalkTo(nextWork ? workplace : restSpot))
+            Vector3 spot = restSpot;
+            if (!nextWork)
+            {
+                Vector2 r = Random.insideUnitCircle * wanderRadius;
+                spot += new Vector3(r.x, 0f, r.y);
+            }
+            if (!WalkTo(nextWork ? workplace : spot) && !(!nextWork && WalkTo(restSpot)))
                 SetActivity(Activity.Idle, 1f);
         }
 
@@ -278,7 +318,8 @@ namespace Amusnet.NPC
             return agent.SetDestination(target);
         }
 
-        private bool Arrived() => !agent.pathPending && (transform.position - target).sqrMagnitude < .7f;
+        // Flat distance: the agent's base offset must not stop a villager from ever arriving.
+        private bool Arrived() => !agent.pathPending && Vector3.ProjectOnPlane(transform.position - target, Vector3.up).sqrMagnitude < .7f;
 
         private bool CanSeeButterfly()
         {
@@ -303,19 +344,18 @@ namespace Amusnet.NPC
             if (expressiveRig)
             {
                 bool startled = Time.time < startledUntil;
-                string pose = startled ? "Startle" : CurrentActivity switch
+                int state = startled ? startleState : CurrentActivity switch
                 {
-                    Activity.Working => "Sort goods",
-                    Activity.Complaining => "Protest",
-                    _ => speed > .15f ? "Walk" : "Watch"
+                    Activity.Working => sortState,
+                    Activity.Complaining => protestState,
+                    _ => speed > .15f ? WalkState : WatchState
                 };
-                int state = Animator.StringToHash("Base Layer." + pose);
                 if (state != motion)
                 {
                     animator.CrossFadeInFixedTime(state, startled ? .07f : .16f);
                     motion = state;
                 }
-                animator.speed = pose == "Walk" ? Mathf.Clamp(speed / 1.65f, .5f, 2f) : 1f;
+                animator.speed = state == WalkState ? Mathf.Clamp(speed / 1.65f, .5f, 2f) : 1f;
                 if (view) bubble.transform.rotation = view.transform.rotation;
                 return;
             }

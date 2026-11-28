@@ -22,7 +22,7 @@ public sealed class ButterflySwarm : MonoBehaviour
     [Tooltip("One wild butterfly wanders around each of these points.")]
     [SerializeField] Transform[] mateHomes;
     [SerializeField] float wanderRadius = 10f;
-    [SerializeField] float pairRadius = 2.5f;
+    [SerializeField] float pairRadius = 1.5f;
     [SerializeField] float pairSeconds = 1.6f;
     [SerializeField] int babiesPerMate = 2;
     [SerializeField] float multiplierPerBaby = 0.1f;
@@ -30,7 +30,10 @@ public sealed class ButterflySwarm : MonoBehaviour
     [SerializeField] float angerPerBaby = 0.03f;
     [SerializeField] Color mateTint = new Color(1f, 0.55f, 0.75f);
     [SerializeField] Color babyTint = new Color(1f, 0.7f, 0.85f);
-    [SerializeField] float babyScale = 0.3f;
+    [Tooltip("Scale of a wild mate, as a multiple of the butterfly model's own scale.")]
+    [SerializeField] float mateScale = 0.3f;
+    [Tooltip("Scale of a baby, as a multiple of the butterfly model's own scale.")]
+    [SerializeField] float babyScale = 0.15f;
     [SerializeField] Material sparkleMaterial;
 
     [Header("Baby mischief")]
@@ -51,6 +54,7 @@ public sealed class ButterflySwarm : MonoBehaviour
     readonly List<WildButterfly> mates = new List<WildButterfly>();
     readonly List<Baby> babies = new List<Baby>();
     Interactable[] props;
+    float propsRefreshAt;
     MessManager mess;
     bool toldMischief;
 
@@ -82,7 +86,7 @@ public sealed class ButterflySwarm : MonoBehaviour
         foreach (var home in mateHomes)
         {
             if (home == null) continue;
-            var mate = MakeButterfly("Wild butterfly", mateTint, 1f);
+            var mate = MakeButterfly("Wild butterfly", mateTint, mateScale);
             AddSparkles(mate.transform);
             var wild = mate.AddComponent<WildButterfly>();
             wild.Init(home.position, wanderRadius);
@@ -111,7 +115,7 @@ public sealed class ButterflySwarm : MonoBehaviour
         for (int i = 0; i < babiesPerMate; i++)
         {
             var baby = MakeButterfly("Baby butterfly", babyTint, babyScale);
-            baby.transform.position = mate.transform.position + Random.insideUnitSphere * 0.4f;
+            baby.transform.position = mate.transform.position + Random.insideUnitSphere * (0.4f * transform.lossyScale.y);
             babies.Add(new Baby { body = baby.transform, nextErrandAt = Time.time + Random.Range(errandInterval.x, errandInterval.y) });
             if (AngerLevels.Instance != null) AngerLevels.Instance.AddAgitation(angerPerBaby);
         }
@@ -125,6 +129,7 @@ public sealed class ButterflySwarm : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0f) return;
         bool running = GameFlow.Instance == null || GameFlow.Instance.IsRunning;
+        float size = transform.lossyScale.y; // the brood's ring shrinks and grows with the player
         for (int i = 0; i < babies.Count; i++)
         {
             var b = babies[i];
@@ -132,8 +137,8 @@ public sealed class ButterflySwarm : MonoBehaviour
 
             // The brood circles the player a little above it, clear of the camera behind.
             float a = i * 137.5f + Time.time * 50f;
-            Vector3 ring = Quaternion.Euler(0f, a, 0f) * Vector3.forward * (1.3f + 0.2f * (i % 3));
-            Vector3 home = transform.position + ring + Vector3.up * (0.6f + 0.25f * Mathf.Sin(Time.time * 3f + i));
+            Vector3 ring = Quaternion.Euler(0f, a, 0f) * Vector3.forward * ((1.3f + 0.2f * (i % 3)) * size);
+            Vector3 home = transform.position + ring + Vector3.up * ((0.6f + 0.25f * Mathf.Sin(Time.time * 3f + i)) * size);
 
             if (b.target != null && (!running || b.target.HasInteracted)) { b.target = null; b.returning = true; }
             if (b.target == null && !b.returning && running && Time.time >= b.nextErrandAt) b.target = PickProp();
@@ -166,17 +171,28 @@ public sealed class ButterflySwarm : MonoBehaviour
     // The nearest untouched prop around the player that no other baby is already heading for.
     Interactable PickProp()
     {
-        if (props == null) props = FindObjectsByType<Interactable>();
+        // Re-scan now and then so props that appear or get enabled later are found too.
+        if (props == null || Time.time >= propsRefreshAt)
+        {
+            props = FindObjectsByType<Interactable>();
+            propsRefreshAt = Time.time + 10f;
+        }
         Interactable best = null;
         float bestDist = errandRadius * errandRadius;
         foreach (var p in props)
         {
             if (p == null || !p.isActiveAndEnabled || p.HasInteracted || p.Points <= 0) continue;
-            if (babies.Exists(b => b.target == p)) continue;
+            if (Claimed(p)) continue;
             float d = (p.transform.position - transform.position).sqrMagnitude;
             if (d < bestDist) { bestDist = d; best = p; }
         }
         return best;
+    }
+
+    bool Claimed(Interactable p)
+    {
+        foreach (var b in babies) if (b.target == p) return true;
+        return false;
     }
 
     void Mischief(Baby b)

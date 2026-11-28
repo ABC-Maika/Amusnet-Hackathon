@@ -16,4 +16,3 @@ MonoBehaviour:
   messPop: {fileID: 4812769442313084127, guid: ddd8bad4de19a624baf991735a495631, type: 3}
   angerIcon: {fileID: 7407785538059811267, guid: 8418ea5bc268e494aa5c1df9f00fe431, type: 3}
   deathBurst: {fileID: 661867244376971417, guid: c68f62c35dbc4cf4d924e4f866f1a6c7, type: 3}
-  spiritTrail: {fileID: 8519890896890200094, guid: 086dec1696b16d74b9190ace84f1d185, type: 3}
