@@ -1,8 +1,8 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Amusnet.Mess
 {
-    public abstract class Interactable : MonoBehaviour
+    public abstract class Interactable : MonoBehaviour, global::Butterfly.Death.IChainReactionTarget
     {
         [SerializeField, Min(1)] private int messValue = 5;
         [SerializeField] private AudioClip impact;
@@ -52,5 +52,12 @@ namespace Amusnet.Mess
         }
 
         protected virtual void OnInteracted(MessManager manager) { }
+
+        // The martyr's landing blast knocks over nearby props as real mess.
+        float global::Butterfly.Death.IChainReactionTarget.TriggerChain(Vector3 origin, float power)
+        {
+            var manager = FindFirstObjectByType<MessManager>();
+            return TryInteract(manager) ? Points * Mathf.Max(0f, power) : 0f;
+        }
     }
 }

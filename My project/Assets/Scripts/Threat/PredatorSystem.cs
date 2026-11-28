@@ -65,7 +65,20 @@ public class PredatorSystem : MonoBehaviour
     void Update()
     {
         var flow = GameFlow.Instance;
-        if (catching || !player || !flow || !flow.IsRunning) return;
+        if (catching || !flow || !flow.IsRunning) return;
+
+        // Only one predator system should drive the game. When Kris's PredatorMeter (Sprint 4, staged
+        // warnings + countdown) is in the scene it owns the threat; this one just mirrors it to the HUD.
+        var meter = Butterfly.Death.PredatorMeter.Instance;
+        if (meter && meter.isActiveAndEnabled)
+        {
+            Percent = meter.Percent;
+            IsHidden = meter.IsHidden;
+            GameHUD.Instance?.SetPredator(Percent);
+            return;
+        }
+
+        if (!player) return;
 
         // Hidden in a HidingZone, or inside one of emkata's HidingSpots (tracked by a ShelterState on the player).
         if (shelter == null) shelter = player.GetComponentInParent<Amusnet.World.ShelterState>();
@@ -96,7 +109,31 @@ public class PredatorSystem : MonoBehaviour
     void TriggerCatch()
     {
         catching = true;
+
+        // Death system present: the bird strikes, the martyr flutter plays, and
+        // GameIntegration turns DeathManager.DeathFinished into GameFlow.Lose().
+        var deaths = Butterfly.Death.DeathManager.Instance;
+        if (deaths)
+        {
+            var bird = GetComponent<Butterfly.Death.BirdDeath>();
+            if (!bird) bird = gameObject.AddComponent<Butterfly.Death.BirdDeath>();
+            var victim = player.gameObject;
+            var striker = Butterfly.Death.PredatorBird.Instance;
+            if (striker) striker.Strike(victim, () => deaths.Die(bird, victim));
+            else deaths.Die(bird, victim);
+            return;
+        }
+
         StartCoroutine(PlaceholderCatch());
+    }
+
+    /// <summary>For a new run.</summary>
+    public void ResetThreat()
+    {
+        Percent = 0f;
+        openTime = 0f;
+        catching = false;
+        StopAllCoroutines();
     }
 
     // Placeholder: a dark shape swoops down onto the player, then the run is lost.

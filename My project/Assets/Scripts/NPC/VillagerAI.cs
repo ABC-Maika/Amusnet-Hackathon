@@ -1,5 +1,7 @@
 using Amusnet.Mess;
 using Amusnet.World;
+using Butterfly.Death;
+using Butterfly.NPC;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -33,6 +35,17 @@ namespace Amusnet.NPC
         private float repathIn;
         private bool nextWork = true;
 
+        [Header("Anger tools")]
+        [SerializeField, Tooltip("Seconds between 'Got you!' and the swing.")] private float swingWindUp = .45f;
+        [SerializeField, Tooltip("How far the swatter or net reaches when it lands.")] private float swingReach = 2.2f;
+        [SerializeField] private float trapCooldown = 15f;
+        [SerializeField] private float trapLifetime = 20f;
+        [SerializeField] private int maxTraps = 2;
+        private SwatterDeath swatter;
+        private NetDeath net;
+        private float swingAt, nextTrapAt;
+        private int liveTraps;
+
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -56,7 +69,7 @@ namespace Amusnet.NPC
         private void Notice(Interactable source, int amount)
         {
             if (!agent.isOnNavMesh || !source
-                || (source.transform.position - transform.position).sqrMagnitude > hearingRadius * hearingRadius) return;
+                || (source.transform.position - transform.position).sqrMagnitude > HearingRadius * HearingRadius) return;
             if (expressiveRig && Time.time >= takeNoticeAfter)
             {
                 startledUntil = Time.time + .86f;
@@ -99,14 +112,32 @@ namespace Amusnet.NPC
                     }
                     break;
                 case Activity.Chasing:
-                    if (gust && CanSeeButterfly())
+                    if (swingAt > 0f)
+                    {
+                        TurnTowards(mess.transform.position);
+                        if (Time.time >= swingAt) Swing();
+                        break;
+                    }
+                    if (CanSeeButterfly())
                     {
                         Vector3 offset = mess.transform.position - transform.position;
+                        TryPlaceTrap();
                         if (offset.y < 1.95f && Vector3.ProjectOnPlane(offset, Vector3.up).sqrMagnitude < 1.3f)
                         {
-                            gust.Shoo();
-                            SetActivity(Activity.Complaining, 2.4f);
-                            break;
+                            if (HeldTool() != null)
+                            {
+                                // Short wind-up so the player can still dodge.
+                                swingAt = Time.time + swingWindUp;
+                                agent.isStopped = true;
+                                bubble.text = "Got you!";
+                                break;
+                            }
+                            if (gust)
+                            {
+                                gust.Shoo();
+                                SetActivity(Activity.Complaining, 2.4f);
+                                break;
+                            }
                         }
                     }
                     if (remaining <= 0f || !CanSeeButterfly())
@@ -129,20 +160,107 @@ namespace Amusnet.NPC
         {
             CurrentActivity = activity;
             remaining = seconds;
+            swingAt = 0f;
             bool travelling = activity is Activity.Walking or Activity.Investigating or Activity.Chasing;
             if (agent.isOnNavMesh)
             {
                 if (!travelling) agent.ResetPath();
                 agent.isStopped = !travelling;
-                agent.speed = activity == Activity.Chasing ? 3.8f : activity == Activity.Investigating ? 2.6f : 1.65f;
+                float baseSpeed = activity == Activity.Chasing ? 3.8f : activity == Activity.Investigating ? 2.6f : 1.65f;
+                // Angry villagers only hurry when they are after the butterfly.
+                agent.speed = travelling && activity != Activity.Walking ? baseSpeed * AngerSpeed : baseSpeed;
             }
+            var tier = Anger ? Anger.Tier : AngerTier.Calm;
             bubble.text = activity switch
             {
-                Activity.Investigating => "What was that?",
-                Activity.Chasing => "Hey!",
-                Activity.Complaining => "What a mess!",
+                Activity.Investigating => tier >= AngerTier.Angry ? "Where are you?!" : "What was that?",
+                Activity.Chasing => tier switch
+                {
+                    AngerTier.Furious => "I'll trap you!",
+                    AngerTier.Angry => "Get the net!",
+                    AngerTier.Annoyed => "Swat it!",
+                    _ => "Hey!"
+                },
+                Activity.Complaining => tier >= AngerTier.Angry ? "That butterfly again!" : "What a mess!",
                 _ => ""
             };
+            UpdateToolVisibility();
+        }
+
+        // ---------- Anger tools (swatter / net / trap) ----------
+
+        private static AngerLevels Anger => AngerLevels.Instance;
+        private static float AngerSpeed => Anger ? Mathf.Max(.1f, Anger.SpeedMultiplier) : 1f;
+        private static bool CanUse(AngerTools tool) => Anger && Anger.Can(tool);
+        private float HearingRadius => Anger ? Mathf.Max(hearingRadius, Anger.NoticeRadius) : hearingRadius;
+
+        private ProximityKiller HeldTool()
+        {
+            if (CanUse(AngerTools.Net)) return net ? net : net = MakeTool<NetDeath>("Villager Net");
+            if (CanUse(AngerTools.Swatter)) return swatter ? swatter : swatter = MakeTool<SwatterDeath>("Villager Swatter");
+            return null;
+        }
+
+        private T MakeTool<T>(string toolName) where T : ProximityKiller
+        {
+            var go = new GameObject(toolName);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(.35f, 0f, .1f);
+            var tool = go.AddComponent<T>(); // Awake applies the killer's defaults
+            tool.autoHunt = false;           // the villager decides when to swing
+            return tool;
+        }
+
+        // Only the tool the villager may use right now is shown. Never toggle mid-death: it would stop the kill animation.
+        private void UpdateToolVisibility()
+        {
+            if (DeathManager.Instance && DeathManager.Instance.IsDying) return;
+            bool useNet = CanUse(AngerTools.Net), useSwatter = !useNet && CanUse(AngerTools.Swatter);
+            if (useNet && !net) HeldTool();
+            if (useSwatter && !swatter) HeldTool();
+            if (net) net.gameObject.SetActive(useNet);
+            if (swatter) swatter.gameObject.SetActive(useSwatter);
+        }
+
+        private void Swing()
+        {
+            swingAt = 0f;
+            var tool = HeldTool();
+            Vector3 offset = mess.transform.position - transform.position;
+            bool inReach = offset.y < 2.4f && Vector3.ProjectOnPlane(offset, Vector3.up).sqrMagnitude < swingReach * swingReach;
+            if (tool && inReach && CanSeeButterfly() && DeathManager.Instance && !DeathManager.Instance.IsDying)
+            {
+                DeathManager.Instance.Die(tool, mess.gameObject);
+                SetActivity(Activity.Complaining, 3f);
+                bubble.text = "Got it!";
+                return;
+            }
+            SetActivity(Activity.Complaining, 2.4f);
+            bubble.text = "Missed!";
+        }
+
+        private void TryPlaceTrap()
+        {
+            if (!CanUse(AngerTools.Trap) || Time.time < nextTrapAt || liveTraps >= maxTraps) return;
+            Vector3 spot = mess.transform.position;
+            spot.y = transform.position.y;
+            if (!NavMesh.SamplePosition(spot, out var hit, 3f, NavMesh.AllAreas)) return;
+            nextTrapAt = Time.time + trapCooldown;
+
+            var go = new GameObject("Villager Zapper Trap");
+            go.transform.position = hit.position;
+            var trap = go.AddComponent<ZapperLampDeath>();
+            trap.nightOnly = false;      // villager traps work in daylight too
+            trap.lifetime = trapLifetime;
+            liveTraps++;
+            go.AddComponent<TrapCounter>().owner = this;
+            bubble.text = "Trap set!";
+        }
+
+        private sealed class TrapCounter : MonoBehaviour
+        {
+            public VillagerAI owner;
+            private void OnDestroy() { if (owner) owner.liveTraps--; }
         }
 
         private void BeginRoutine()
