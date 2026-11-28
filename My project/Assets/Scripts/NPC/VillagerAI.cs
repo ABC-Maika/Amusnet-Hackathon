@@ -34,6 +34,7 @@ namespace Amusnet.NPC
         private float remaining;
         private float repathIn;
         private bool nextWork = true;
+        private VillagerDailyRoutine dailyRoutine;
 
         [Header("Anger tools")]
         [SerializeField, Tooltip("Seconds between 'Got you!' and the swing.")] private float swingWindUp = .45f;
@@ -54,6 +55,10 @@ namespace Amusnet.NPC
             view = Camera.main;
             modelPosition = animator.transform.localPosition;
             modelRotation = animator.transform.localRotation;
+            if (TryGetComponent(out dailyRoutine) && dailyRoutine.enabled)
+                dailyRoutine.Bind(animator);
+            else
+                dailyRoutine = null;
         }
 
         private void OnEnable() => mess.MessCreated += Notice;
@@ -63,7 +68,7 @@ namespace Amusnet.NPC
         {
             if (!agent.isOnNavMesh && NavMesh.SamplePosition(transform.position, out var closest, 2f, agent.areaMask))
                 agent.Warp(closest.position);
-            SetActivity(Activity.Idle, 1.1f);
+            SetActivity(Activity.Idle, dailyRoutine ? dailyRoutine.FirstDeparture : 1.1f);
         }
 
         private void Notice(Interactable source, int amount)
@@ -91,9 +96,25 @@ namespace Amusnet.NPC
                 case Activity.Complaining:
                     if (CurrentActivity == Activity.Complaining && mess)
                         TurnTowards(mess.transform.position);
+                    if (dailyRoutine && dailyRoutine.AtStop)
+                        TurnTowards(dailyRoutine.LookAt);
                     if (remaining <= 0f) BeginRoutine();
                     break;
                 case Activity.Walking:
+                    if (dailyRoutine)
+                    {
+                        if (dailyRoutine.HasArrived(agent))
+                        {
+                            SetActivity(dailyRoutine.IsRestStop ? Activity.Idle : Activity.Working, dailyRoutine.StopDuration);
+                            dailyRoutine.Arrive();
+                        }
+                        else if (remaining <= 0f)
+                        {
+                            dailyRoutine.SkipStop();
+                            SetActivity(Activity.Idle, 1f);
+                        }
+                        break;
+                    }
                     if (Arrived() || remaining <= 0f)
                     {
                         SetActivity(nextWork ? Activity.Working : Activity.Idle, nextWork ? 3.5f : 2.4f);
@@ -161,6 +182,8 @@ namespace Amusnet.NPC
             CurrentActivity = activity;
             remaining = seconds;
             swingAt = 0f;
+            if (activity is Activity.Investigating or Activity.Chasing or Activity.Complaining)
+                dailyRoutine?.Interrupt();
             bool travelling = activity is Activity.Walking or Activity.Investigating or Activity.Chasing;
             if (agent.isOnNavMesh)
             {
@@ -266,6 +289,12 @@ namespace Amusnet.NPC
         private void BeginRoutine()
         {
             SetActivity(Activity.Walking, 12f);
+            if (dailyRoutine)
+            {
+                if (dailyRoutine.TryDepart(agent, out float travelTime)) remaining = travelTime;
+                else SetActivity(Activity.Idle, 2f);
+                return;
+            }
             if (!WalkTo(nextWork ? workplace : restSpot))
                 SetActivity(Activity.Idle, 1f);
         }

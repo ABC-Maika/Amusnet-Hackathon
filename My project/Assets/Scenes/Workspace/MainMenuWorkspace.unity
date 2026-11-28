@@ -7934,6 +7934,7 @@ GameObject:
   - component: {fileID: 187446118}
   - component: {fileID: 187446120}
   - component: {fileID: 187446119}
+  - component: {fileID: 187446121}
   m_Layer: 0
   m_Name: Villager - Honey
   m_TagString: Untagged
@@ -8005,6 +8006,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &187446121
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187446117}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 3
+    position: {x: 1.73, y: 1.32, z: 76.3}
+    lookAt: {x: 2.37, y: 1.32, z: 74.24}
+    seconds: 10
+    tool: {fileID: 2406948658431427601, guid: e0d4fc49d8c9653dda5fdfebafe3d636, type: 3}
+  - chore: 2
+    position: {x: 0.55, y: 1.72, z: 72.02}
+    lookAt: {x: 1.26, y: 1.72, z: 73.09}
+    seconds: 9
+    tool: {fileID: 1271442312181427085, guid: dc068e87b26b711e5adc96faad38c4bc, type: 3}
+  - chore: 0
+    position: {x: -2.41, y: 1.17, z: 77.02}
+    lookAt: {x: 1.62, y: 1.17, z: 75.2}
+    seconds: 6
+    tool: {fileID: 0}
+  firstDeparture: 1.6
 --- !u!1 &191524363
 GameObject:
   m_ObjectHideFlags: 0
@@ -15491,6 +15521,7 @@ GameObject:
   - component: {fileID: 355875197}
   - component: {fileID: 355875199}
   - component: {fileID: 355875198}
+  - component: {fileID: 355875200}
   m_Layer: 0
   m_Name: Villager - Marigold
   m_TagString: Untagged
@@ -15562,6 +15593,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &355875200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 355875196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 4
+    position: {x: 69.12, y: 1.79, z: -51.52}
+    lookAt: {x: 69.69, y: 1.79, z: -50.96}
+    seconds: 10
+    tool: {fileID: 6703229089963781187, guid: 4627f2d7db4c951278f779133c4828dc, type: 3}
+  - chore: 1
+    position: {x: 73.15, y: 1.55, z: -54.49}
+    lookAt: {x: 72.33, y: 1.55, z: -51.18}
+    seconds: 9
+    tool: {fileID: 6980567934354535841, guid: 17df6e9b190f30aa4916a7859242fc87, type: 3}
+  - chore: 0
+    position: {x: 68.2, y: 1.79, z: -54.49}
+    lookAt: {x: 70.4, y: 1.79, z: -51.1}
+    seconds: 6
+    tool: {fileID: 0}
+  firstDeparture: 1.9
 --- !u!1 &358853783
 GameObject:
   m_ObjectHideFlags: 0
@@ -16310,6 +16370,7 @@ GameObject:
   - component: {fileID: 406689791}
   - component: {fileID: 406689793}
   - component: {fileID: 406689792}
+  - component: {fileID: 406689794}
   m_Layer: 0
   m_Name: Villager - Marigold
   m_TagString: Untagged
@@ -16381,6 +16442,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &406689794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 406689790}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 1
+    position: {x: -22.2, y: 0.03, z: 19.95}
+    lookAt: {x: -22.8, y: 0.03, z: 18.8}
+    seconds: 12
+    tool: {fileID: 6980567934354535841, guid: 17df6e9b190f30aa4916a7859242fc87, type: 3}
+  - chore: 0
+    position: {x: -22.94, y: 0.06, z: 22.37}
+    lookAt: {x: -17.5, y: 0.06, z: 23.8}
+    seconds: 6
+    tool: {fileID: 0}
+  - chore: 3
+    position: {x: -18.1, y: 0.04, z: 21.25}
+    lookAt: {x: -18.75, y: 0.04, z: 18.99}
+    seconds: 8
+    tool: {fileID: 2406948658431427601, guid: e0d4fc49d8c9653dda5fdfebafe3d636, type: 3}
+  firstDeparture: 0.75
 --- !u!1 &408101249
 GameObject:
   m_ObjectHideFlags: 0
@@ -19669,6 +19759,7 @@ GameObject:
   - component: {fileID: 452719366}
   - component: {fileID: 452719368}
   - component: {fileID: 452719367}
+  - component: {fileID: 452719369}
   m_Layer: 0
   m_Name: Villager - Ribbon
   m_TagString: Untagged
@@ -19740,6 +19831,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &452719369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 452719365}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 1
+    position: {x: 61.58, y: 1.4, z: 24.85}
+    lookAt: {x: 64.8, y: 1.4, z: 25.6}
+    seconds: 11
+    tool: {fileID: 6980567934354535841, guid: 17df6e9b190f30aa4916a7859242fc87, type: 3}
+  - chore: 3
+    position: {x: 66.53, y: 2.44, z: 29.8}
+    lookAt: {x: 65.2, y: 2.44, z: 27.4}
+    seconds: 9
+    tool: {fileID: 2406948658431427601, guid: e0d4fc49d8c9653dda5fdfebafe3d636, type: 3}
+  - chore: 0
+    position: {x: 64.05, y: 2.29, z: 30.83}
+    lookAt: {x: 65.6, y: 2.29, z: 28.3}
+    seconds: 7
+    tool: {fileID: 0}
+  firstDeparture: 2.4
 --- !u!1 &454722363
 GameObject:
   m_ObjectHideFlags: 0
@@ -22440,6 +22560,7 @@ GameObject:
   - component: {fileID: 488089515}
   - component: {fileID: 488089517}
   - component: {fileID: 488089516}
+  - component: {fileID: 488089518}
   m_Layer: 0
   m_Name: Villager - Mulberry
   m_TagString: Untagged
@@ -22511,6 +22632,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &488089518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 488089514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 4
+    position: {x: -18.04, y: 3.9, z: -68.79}
+    lookAt: {x: -17.26, y: 3.9, z: -68.66}
+    seconds: 9
+    tool: {fileID: 6703229089963781187, guid: 4627f2d7db4c951278f779133c4828dc, type: 3}
+  - chore: 3
+    position: {x: -14.58, y: 4.42, z: -72.56}
+    lookAt: {x: -15.2, y: 4.42, z: -70.4}
+    seconds: 8
+    tool: {fileID: 2406948658431427601, guid: e0d4fc49d8c9653dda5fdfebafe3d636, type: 3}
+  - chore: 0
+    position: {x: -20.55, y: 3.77, z: -70.09}
+    lookAt: {x: -17.3, y: 3.77, z: -68.2}
+    seconds: 6
+    tool: {fileID: 0}
+  firstDeparture: 0.45
 --- !u!1 &497620640
 GameObject:
   m_ObjectHideFlags: 0
@@ -49815,6 +49965,7 @@ GameObject:
   - component: {fileID: 1068947567}
   - component: {fileID: 1068947569}
   - component: {fileID: 1068947568}
+  - component: {fileID: 1068947570}
   m_Layer: 0
   m_Name: Villager - Red Shirt
   m_TagString: Untagged
@@ -49886,6 +50037,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &1068947570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1068947566}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 2
+    position: {x: -83.2, y: 2.46, z: -50.6}
+    lookAt: {x: -83.22, y: 2.46, z: -49.53}
+    seconds: 10
+    tool: {fileID: 1271442312181427085, guid: dc068e87b26b711e5adc96faad38c4bc, type: 3}
+  - chore: 0
+    position: {x: -85.31, y: 2.11, z: -45.21}
+    lookAt: {x: -82.5, y: 2.11, z: -48}
+    seconds: 5
+    tool: {fileID: 0}
+  - chore: 4
+    position: {x: -80.36, y: 1.71, z: -45.21}
+    lookAt: {x: -81.4, y: 1.71, z: -47.53}
+    seconds: 9
+    tool: {fileID: 6703229089963781187, guid: 4627f2d7db4c951278f779133c4828dc, type: 3}
+  firstDeparture: 0.5
 --- !u!1 &1075863697
 GameObject:
   m_ObjectHideFlags: 0
@@ -82136,6 +82316,7 @@ GameObject:
   - component: {fileID: 2010381551}
   - component: {fileID: 2010381553}
   - component: {fileID: 2010381552}
+  - component: {fileID: 2010381554}
   m_Layer: 0
   m_Name: Villager - Honey
   m_TagString: Untagged
@@ -82207,6 +82388,35 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &2010381554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2010381550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73e08b8e9045ecaba3228f3aea7b28, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Amusnet.NPC.VillagerDailyRoutine
+  stops:
+  - chore: 3
+    position: {x: -73.38, y: 3.88, z: 16.45}
+    lookAt: {x: -73.2, y: 3.88, z: 15.6}
+    seconds: 8
+    tool: {fileID: 2406948658431427601, guid: e0d4fc49d8c9653dda5fdfebafe3d636, type: 3}
+  - chore: 1
+    position: {x: -77.56, y: 4.14, z: 12.72}
+    lookAt: {x: -77.4, y: 4.14, z: 11.55}
+    seconds: 11
+    tool: {fileID: 6980567934354535841, guid: 17df6e9b190f30aa4916a7859242fc87, type: 3}
+  - chore: 0
+    position: {x: -75.09, y: 4.31, z: 18.69}
+    lookAt: {x: -72.8, y: 4.31, z: 16}
+    seconds: 7
+    tool: {fileID: 0}
+  firstDeparture: 1.8
 --- !u!1 &2026726935
 GameObject:
   m_ObjectHideFlags: 0
