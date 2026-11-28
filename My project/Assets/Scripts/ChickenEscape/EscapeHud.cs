@@ -8,8 +8,8 @@ namespace Amusnet.ChickenEscape
     {
         [SerializeField] MarketEscapeRun run;
         [SerializeField] Camera view;
-        VisualElement root, pips, backdrop;
-        Label progress, role, clock, key, hint, details, spot, orchard, lane, title, result;
+        VisualElement root, pips, backdrop, rescueProgress;
+        Label objective, progress, following, role, clock, key, hint, details, spot, orchard, lane, title, result;
         Button retry, menu;
         int shownSaved = -1;
 
@@ -17,6 +17,9 @@ namespace Amusnet.ChickenEscape
         {
             root = GetComponent<UIDocument>().rootVisualElement;
             if (root == null) return;
+            objective = root.Q<Label>("objective");
+            rescueProgress = root.Q("rescue-progress");
+            following = root.Q<Label>("following");
             progress = root.Q<Label>("progress");
             role = root.Q<Label>("role");
             clock = root.Q<Label>("clock");
@@ -55,6 +58,7 @@ namespace Amusnet.ChickenEscape
         {
             if (progress == null) return;
             var phase = run.Current;
+            bool intro = phase is MarketEscapeRun.Phase.MeetDog or MarketEscapeRun.Phase.Trust;
             bool finished = phase is MarketEscapeRun.Phase.Won or MarketEscapeRun.Phase.Lost;
             bool overlay = finished || run.IsPaused;
             Toggle(backdrop, overlay);
@@ -73,13 +77,19 @@ namespace Amusnet.ChickenEscape
                 for (int i = 0; i < pips.childCount; i++) pips[i].EnableInClassList("saved", i < run.Saved);
             }
             role.text = run.IsButterfly ? "Butterfly" : "Farm dog";
+            objective.text = phase == MarketEscapeRun.Phase.MeetDog ? "Free the farm dog" :
+                phase == MarketEscapeRun.Phase.Trust ? "You earned his trust" : "Get the chickens out";
+            Toggle(rescueProgress, !intro);
+            Toggle(following, !intro && run.Following > 0);
+            if (run.Following > 0) following.text = $"{run.Following} following the dog";
             clock.text = FormatTime(run.Remaining);
             clock.EnableInClassList("urgent", run.Remaining < 24f);
             Toggle(clock, phase == MarketEscapeRun.Phase.Chase);
             Prompt(phase);
             var marker = run.PrimaryMarker();
             Point(spot, marker, !overlay && marker != Vector3.zero);
-            spot.text = phase == MarketEscapeRun.Phase.FirstHen ? "Loose hen" :
+            spot.text = phase == MarketEscapeRun.Phase.MeetDog ? "Dog’s leash" :
+                phase == MarketEscapeRun.Phase.FirstHen ? "Loose hen" :
                 phase == MarketEscapeRun.Phase.BackToDog ? "Farm dog" :
                 phase == MarketEscapeRun.Phase.OpenPen && !run.IsButterfly ? "Butterfly" :
                 run.ActorPosition.z > 2.24f || phase == MarketEscapeRun.Phase.Chase ? "Latch" : "Blue gap";
@@ -90,8 +100,9 @@ namespace Amusnet.ChickenEscape
         void Prompt(MarketEscapeRun.Phase phase)
         {
             details.text = run.IsButterfly
-                ? "WASD fly   ·   Space rise   ·   Shift descend   ·   F swap"
-                : phase == MarketEscapeRun.Phase.FirstHen ? "Shift sprint" :
+                ? phase == MarketEscapeRun.Phase.MeetDog ? "WASD fly   ·   Space rise   ·   Shift descend" :
+                  phase == MarketEscapeRun.Phase.Trust ? "" : "WASD fly   ·   Space rise   ·   Shift descend   ·   F swap"
+                : phase == MarketEscapeRun.Phase.FirstHen ? "WASD move   ·   Space call" :
                   phase == MarketEscapeRun.Phase.Chase ? "WASD run   ·   Shift sprint   ·   Space bark   ·   F swap" :
                   "WASD run   ·   Shift sprint";
             if (!run.IsButterfly && phase == MarketEscapeRun.Phase.Chase)
@@ -100,22 +111,28 @@ namespace Amusnet.ChickenEscape
 
             (string control, string message) = phase switch
             {
-                MarketEscapeRun.Phase.FirstHen => ("WASD", "Run behind the hen and guide it to the orchard gap."),
+                MarketEscapeRun.Phase.MeetDog when run.CanUntieDog => ("E", "Loosen the knot to free the dog."),
+                MarketEscapeRun.Phase.MeetDog => ("WASD", "The keeper tied up the dog. Fly over to his leash."),
+                MarketEscapeRun.Phase.Trust when run.CanSwitchToAlly => ("F", "Switch to the dog. He’ll help you free the hens."),
+                MarketEscapeRun.Phase.Trust => ("", "He lowers his head and lets you land."),
+                MarketEscapeRun.Phase.FirstHen when run.Following > 0 => ("WASD", "Lead the hen through the orchard gap."),
+                MarketEscapeRun.Phase.FirstHen => ("SPACE", "Bark near the loose hen to call her to you."),
                 MarketEscapeRun.Phase.OpenPen when !run.IsButterfly => ("F", "Switch to the butterfly to get inside the pen."),
                 MarketEscapeRun.Phase.OpenPen when run.CanUseLatch => ("E", "Gust the latch to open the pen."),
                 MarketEscapeRun.Phase.OpenPen when run.ActorPosition.z > 2.24f => ("WASD", "Fly up to the latch."),
                 MarketEscapeRun.Phase.OpenPen => ("WASD", "Fly through the blue gap to reach the latch."),
-                MarketEscapeRun.Phase.BackToDog => ("F", "Switch back to the dog and move the flock."),
+                MarketEscapeRun.Phase.BackToDog => ("F", "Switch back to the dog to call the flock."),
                 MarketEscapeRun.Phase.Chase when run.CanUseLatch => ("E", "Gust the latch to open the pen again."),
                 MarketEscapeRun.Phase.Chase when run.GateNeedsOpening && !run.IsButterfly => ("F", "The keeper shut the gate. Fly in and reopen it."),
                 MarketEscapeRun.Phase.Chase when run.GateNeedsOpening => ("WASD", "Go inside the pen to reach the latch."),
                 MarketEscapeRun.Phase.Chase when run.IsButterfly => ("F", "Switch back to the dog to move the flock."),
-                MarketEscapeRun.Phase.Chase when run.KeeperClosing => ("SPACE", "The keeper is coming to close the gate. Bark to draw her away."),
+                MarketEscapeRun.Phase.Chase when run.KeeperClosing && run.Following > 0 => ("SPACE", "Bark to distract the keeper, then lead the flock out."),
                 MarketEscapeRun.Phase.Chase when run.DogStopped => ("", "The keeper cut you off. Slip around her."),
                 MarketEscapeRun.Phase.Chase when run.JustRescued => ("", "Chicken safe."),
                 MarketEscapeRun.Phase.Chase when run.Dragging => ("Q", "Drop the cloth in the keeper’s path to make her go around."),
                 MarketEscapeRun.Phase.Chase when run.CanGrabLaundry => ("Q", "Drag the cloth to set up a detour for the keeper."),
-                MarketEscapeRun.Phase.Chase => ("SPACE", "Face the way you want the hens to run and bark."),
+                MarketEscapeRun.Phase.Chase when run.Following > 0 => ("WASD", "Lead the flock through either marked exit."),
+                MarketEscapeRun.Phase.Chase => ("SPACE", "Bark near the pen to call the hens. Then lead them to an exit."),
                 _ => ("", "")
             };
             key.text = control;

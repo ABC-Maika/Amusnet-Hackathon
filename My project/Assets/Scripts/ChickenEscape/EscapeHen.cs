@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Amusnet.ChickenEscape
 {
@@ -10,68 +11,54 @@ namespace Amusnet.ChickenEscape
         [SerializeField] Transform model;
 
         static readonly int Speed = Animator.StringToHash("Speed");
+        readonly Vector3[] corners = new Vector3[16];
         CharacterController motor;
-        Vector3 home, motion, burst, fleeDirection;
-        float burstUntil, fleeUntil, routeUntil, vertical, idlePhase;
+        NavMeshPath path;
+        Vector3 home, motion;
+        float nextPathAt, calledAt, vertical, idlePhase;
+        int corner, cornerCount;
 
         public bool Saved { get; private set; }
+        public bool Following { get; private set; }
 
         void Awake()
         {
             motor = GetComponent<CharacterController>();
+            path = new NavMeshPath();
             home = transform.position;
             idlePhase = Mathf.Abs(home.x * .61f + home.z * .38f);
         }
 
-        public void Step(EscapeDog dog, EscapeHen[] flock, Vector3? route)
+        public void Step(Vector3 target, EscapeHen[] flock, bool pathOpen, bool enterExit)
         {
             if (Saved) return;
-            Vector3 away = Vector3.ProjectOnPlane(transform.position - dog.transform.position, Vector3.up);
-            bool close = away.sqrMagnitude < 10.9f && (dog.Velocity.sqrMagnitude > .15f || away.sqrMagnitude < 1.82f);
-            bool seesDog = close && !Physics.Linecast(transform.position + Vector3.up * .28f,
-                dog.transform.position + Vector3.up * .18f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            if (seesDog && away.sqrMagnitude > .001f)
+            Vector3 steer = Vector3.zero;
+            float speed = 0f;
+            if (Following)
             {
-                fleeDirection = away.normalized;
-                fleeUntil = Time.time + .66f;
-                if (route.HasValue && Vector3.Dot(fleeDirection, Toward(route.Value)) > .45f)
-                    routeUntil = Mathf.Max(routeUntil, Time.time + 1.35f);
-            }
-            Vector3 steer;
-            float speed;
-            if (route.HasValue && Time.time < routeUntil)
-            {
-                steer = Toward(route.Value);
-                speed = Time.time < burstUntil ? 4.3f : 3.1f;
-                home = transform.position;
-            }
-            else if (Time.time < burstUntil)
-            {
-                steer = burst;
-                speed = 4.3f;
-                home = transform.position;
-            }
-            else if (Time.time < fleeUntil)
-            {
-                steer = fleeDirection;
-                speed = Mathf.Lerp(3.85f, 2.18f, Mathf.Clamp01(away.magnitude / 3.4f));
-                home = transform.position;
+                float distance = Flat(target - transform.position).magnitude;
+                if (pathOpen && distance > (enterExit ? .08f : 1.22f))
+                {
+                    steer = FollowPath(target);
+                    speed = Mathf.Lerp(1.8f, 7.45f, Mathf.InverseLerp(.7f, 5.3f, distance));
+                }
+                else cornerCount = 0;
             }
             else
             {
                 float t = Time.time * .66f + idlePhase;
                 Vector3 wandering = home + new Vector3(Mathf.Sin(t) * .48f,0f,Mathf.Cos(t * .93f) * .32f);
-                steer = Vector3.ClampMagnitude(Vector3.ProjectOnPlane(wandering - transform.position, Vector3.up), 1f);
+                steer = Vector3.ClampMagnitude(Flat(wandering - transform.position), 1f);
                 speed = Mathf.Sin(t * .71f + .6f) > -.1f ? 1.2f : 0f;
             }
 
             foreach (var other in flock)
             {
                 if (other == this || other.Saved) continue;
-                Vector3 separation = Vector3.ProjectOnPlane(transform.position-other.transform.position, Vector3.up);
+                Vector3 separation = Flat(transform.position - other.transform.position);
                 float distance = separation.magnitude;
                 if (distance is > .015f and < .64f)
-                    steer += separation / distance * (.64f - distance) * 1.65f;
+                    steer += separation / distance * (.64f - distance) * 1.05f;
             }
 
             if (steer.sqrMagnitude > .02f)
@@ -80,7 +67,7 @@ namespace Amusnet.ChickenEscape
                 if (Physics.SphereCast(transform.position + Vector3.up * .27f, .14f, forward, out var wall,
                     .48f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 {
-                    Vector3 across = Vector3.ProjectOnPlane(wall.normal, Vector3.up);
+                    Vector3 across = Flat(wall.normal);
                     Vector3 side = Vector3.Cross(Vector3.up, across).normalized;
                     if (Vector3.Dot(side, forward + motion * .2f) < 0f) side = -side;
                     steer = side * .8f + across * .22f;
@@ -95,30 +82,38 @@ namespace Amusnet.ChickenEscape
                     Quaternion.LookRotation(motion), 790f * Time.deltaTime);
             animator.SetFloat(Speed, Mathf.Min(2f, Vector3.ProjectOnPlane(motor.velocity,Vector3.up).magnitude/1.62f),
                 .09f, Time.deltaTime);
-            float peck = speed < 1.3f ? Mathf.Max(0f, Mathf.Sin(Time.time * 5.8f + idlePhase)) : 0f;
-            model.localRotation = Quaternion.Slerp(model.localRotation, Quaternion.Euler(peck * peck * 14f,0f,0f),
+            float peck = !Following && speed < 1.3f ? Mathf.Max(0f, Mathf.Sin(Time.time * 5.8f + idlePhase)) : 0f;
+            float hop = Following ? Mathf.Sin(Mathf.Clamp01((Time.time - calledAt) / .35f) * Mathf.PI) : 0f;
+            model.localRotation = Quaternion.Slerp(model.localRotation, Quaternion.Euler(peck * peck * 14f - hop * 19f, 0f, 0f),
                 1f - Mathf.Exp(-13f*Time.deltaTime));
         }
 
-        public void Startle(Vector3 origin, Vector3 facing, Vector3? route)
+        Vector3 FollowPath(Vector3 target)
         {
-            if (Saved) return;
-            Vector3 away = Vector3.ProjectOnPlane(transform.position-origin, Vector3.up);
-            if (away.sqrMagnitude is < .0001f or > 36f || Physics.Linecast(origin + Vector3.up * .24f,
-                transform.position + Vector3.up *.28f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) return;
-            float angle = Vector3.Dot(facing, away.normalized);
-            if (angle < .18f && away.sqrMagnitude > 2.2f * 2.2f) return;
-            Vector3 direction = angle > .18f ? Vector3.Lerp(away.normalized, facing, .73f) : away.normalized;
-            if (route.HasValue && Vector3.Dot(direction, Toward(route.Value)) > -.03f)
-                routeUntil = Time.time + 2.35f;
-            else
-                routeUntil = 0f;
-            burst = Quaternion.Euler(0f, Mathf.Sin(idlePhase) * 12f, 0f) * direction.normalized;
-            burstUntil = Time.time + 1.27f;
-            home = transform.position;
+            if (Time.time >= nextPathAt)
+            {
+                nextPathAt = Time.time + .18f + idlePhase % .1f;
+                corner = cornerCount = 0;
+                if (NavMesh.SamplePosition(transform.position, out var start, 1.15f, NavMesh.AllAreas) &&
+                    NavMesh.SamplePosition(target, out var end, 1.05f, NavMesh.AllAreas) &&
+                    NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path) &&
+                    path.status == NavMeshPathStatus.PathComplete)
+                    cornerCount = path.GetCornersNonAlloc(corners);
+            }
+            while (corner < cornerCount && Flat(corners[corner] - transform.position).sqrMagnitude < .16f)
+                corner++;
+            return corner < cornerCount ? Flat(corners[corner] - transform.position).normalized : Vector3.zero;
         }
 
-        Vector3 Toward(Vector3 point) => Vector3.ProjectOnPlane(point - transform.position, Vector3.up).normalized;
+        public bool HearBark(Vector3 origin)
+        {
+            if (Saved || Following || Flat(transform.position - origin).sqrMagnitude > 8.5f * 8.5f) return false;
+            Following = true;
+            calledAt = Time.time;
+            return true;
+        }
+
+        static Vector3 Flat(Vector3 vector) => Vector3.ProjectOnPlane(vector, Vector3.up);
 
         public void Rescue(Vector3 exitDirection)
         {

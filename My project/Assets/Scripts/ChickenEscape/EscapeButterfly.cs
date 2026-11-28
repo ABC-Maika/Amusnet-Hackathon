@@ -25,6 +25,16 @@ namespace Amusnet.ChickenEscape
             wings.Play("Base Layer.Takeoff", 0, 0f);
         }
 
+        public void PerchAt(Vector3 point)
+        {
+            motion = Vector3.zero;
+            Vector3 offset = point - transform.position;
+            motor.Move(Vector3.ClampMagnitude(offset, 6f * Time.deltaTime));
+            bool landing = offset.sqrMagnitude > .025f;
+            wings.SetBool(Flapping, landing);
+            wings.SetInteger(FlightPose, landing ? 2 : 0);
+        }
+
         public void Step(Vector2 input, float climb, bool controlled)
         {
             float floor = .58f;
