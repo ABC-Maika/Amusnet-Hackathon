@@ -28,6 +28,27 @@ public sealed class ButterflyFlightSettings : ScriptableObject
     [Tooltip("Wing flap speed while hovering, 1 is full speed.")]
     [Range(0.1f, 1f)] public float hoverWingSpeed = 0.45f;
 
+    [Header("Momentum (W / S)")]
+    [Tooltip("Build-up while boosting.")]
+    [Min(0.1f)] public float boostAcceleration = 5f;
+    [Tooltip("How quickly speed bleeds off with no keys held (m/s per second).")]
+    [Min(0.05f)] public float coastDeceleration = 1.1f;
+    [Tooltip("How hard S brakes. S never reverses.")]
+    [Min(0.1f)] public float brakeDeceleration = 6f;
+    [Min(0.1f)] public float throttleResponse = 4f;
+    [Tooltip("How tightly the flight path follows the heading (higher = snappier, lower = more drift in turns).")]
+    [Range(1f, 20f)] public float turnGrip = 5f;
+
+    [Header("Mouse pitch")]
+    [Tooltip("Degrees of flight pitch per mouse pixel; mouse up climbs.")]
+    [Min(0.01f)] public float mouseSensitivity = 0.12f;
+
+    [Header("Motion")]
+    [Range(0f, 45f)] public float bankAngle = 28f;
+    [Min(0.1f)] public float bankResponse = 5f;
+    [Min(0f)] public float flutterHeight = 0.07f;
+    [Min(0.1f)] public float flutterSpeed = 7f;
+
     [Header("Controls")]
     [Tooltip("Rising speed with Space (m/s).")]
     [Min(0.1f)] public float climbSpeed = 1.7f;

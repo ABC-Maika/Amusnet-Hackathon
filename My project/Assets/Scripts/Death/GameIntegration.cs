@@ -82,12 +82,15 @@ namespace Butterfly.Death
             if (AngerLevels.Instance != null) AngerLevels.Instance.SetMess(normalised);
             if (GameHUD.Instance != null) GameHUD.Instance.SetMess(normalised);
             // Enough mess drives the villagers out: the run is won.
-            if (mess.HasReachedGoal && GameFlow.Instance != null && GameFlow.Instance.IsRunning) GameFlow.Instance.Win();
+            // (Not while dying: the martyr's landing blast can push the score over, but the run is lost.)
+            bool dying = DeathManager.Instance != null && DeathManager.Instance.IsDying;
+            if (mess.HasReachedGoal && !dying && GameFlow.Instance != null && GameFlow.Instance.IsRunning) GameFlow.Instance.Win();
         }
 
         void OnAllyMess(RebelAnimal ally, float amount)
         {
             if (mess == null || amount <= 0f) return;
+            if (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) return;
             allyRemainder += amount * mess.Multiplier;
             int whole = Mathf.FloorToInt(allyRemainder);
             if (whole <= 0) return;

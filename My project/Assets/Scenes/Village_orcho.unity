@@ -12975,10 +12975,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.8
   stalkSpeed: 5
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 0.8
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 7
   cooldown: 7
   label: Perch
@@ -21070,10 +21071,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1
   stalkSpeed: 3.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.25
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 8
   cooldown: 7
   label: Carp
@@ -32019,6 +32021,9 @@ MonoBehaviour:
   maximumTurnLean: 7
   boostPullback: 1.15
   motionResponse: 5
+  pitchFollow: 0.4
+  boostFovKick: 14
+  speedFovKick: 5
 --- !u!114 &436003446
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34062,10 +34067,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.5
   stalkSpeed: 4.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.05
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 10
   cooldown: 7
   label: Trout
@@ -42541,10 +42547,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1
   stalkSpeed: 3.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.25
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 8
   cooldown: 7
   label: Carp
@@ -51540,8 +51547,6 @@ MonoBehaviour:
   radius: 2.3
   weave: 2.5
   showDistance: 34
-  slowDistance: 6
-  slowScale: 0.35
 --- !u!4 &743490974
 Transform:
   m_ObjectHideFlags: 0
@@ -64341,10 +64346,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.8
   stalkSpeed: 5
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 0.8
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 7
   cooldown: 7
   label: Perch
@@ -90826,8 +90832,6 @@ MonoBehaviour:
   radius: 2.3
   weave: 2.5
   showDistance: 34
-  slowDistance: 6
-  slowScale: 0.35
 --- !u!4 &1298362391
 Transform:
   m_ObjectHideFlags: 0
@@ -98921,10 +98925,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.8
   stalkSpeed: 5
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 0.8
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 7
   cooldown: 7
   label: Perch
@@ -126336,10 +126341,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1
   stalkSpeed: 3.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.25
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 8
   cooldown: 7
   label: Carp
@@ -133926,7 +133932,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -6.9677424, y: 9.079597, z: 25.342234}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1286220976}
@@ -141388,10 +141394,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.5
   stalkSpeed: 4.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.05
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 10
   cooldown: 7
   label: Trout
@@ -143659,10 +143666,11 @@ MonoBehaviour:
   riverMax: {x: 66, y: 0, z: -15.5}
   swimSpeed: 1.5
   stalkSpeed: 4.2
-  attackRange: 13
-  nearHeight: 7
-  leapRange: 5
-  leapTime: 1.05
+  attackRange: 6.5
+  nearHeight: 4
+  leapRange: 3.6
+  leapGravity: 7
+  leapTime: 1.15
   mashesNeeded: 10
   cooldown: 7
   label: Trout

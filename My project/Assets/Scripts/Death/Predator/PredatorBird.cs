@@ -194,7 +194,8 @@ namespace Butterfly.Death
             // 4. the spirit of the butterfly falls: Martyr's Last Flutter
             victim.transform.position = transform.position + Vector3.down * 0.5f;
             victim.transform.localScale = startScale;
-            foreach (var b in frozen) if (b != null) b.enabled = true;
+            bool alreadyDying = DeathManager.Instance != null && DeathManager.Instance.IsDying;
+            if (!alreadyDying) foreach (var b in frozen) if (b != null) b.enabled = true;
             if (rb != null) rb.isKinematic = false;
             onEaten?.Invoke();
 

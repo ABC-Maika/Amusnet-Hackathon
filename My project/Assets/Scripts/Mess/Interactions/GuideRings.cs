@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Amusnet.Mess
 {
     // A trail of glowing rings that leads the butterfly from wherever it is straight to a mission's rope. The trail is laid
-    // out fresh each time the player comes near, the next ring pulses, and time slows while the player lines up on it.
+    // out fresh each time the player comes near, the next ring pulses.
     public sealed class GuideRings : MonoBehaviour
     {
         [SerializeField] private BoatDrift mission;
@@ -13,8 +13,6 @@ namespace Amusnet.Mess
         [SerializeField] private float radius = 2.3f;
         [SerializeField] private float weave = 2.5f;
         [SerializeField] private float showDistance = 34f;
-        [SerializeField] private float slowDistance = 6f;
-        [SerializeField] private float slowScale = 0.35f;
 
         private Transform player;
         private LineRenderer[] rings;
@@ -95,7 +93,6 @@ namespace Amusnet.Mess
             {
                 var d = player.position - centers[next];
                 if (d.sqrMagnitude < radius * radius * 0.8f) next++;
-                else if (d.sqrMagnitude < slowDistance * slowDistance) TimeSlow.Hold(slowScale);
             }
 
             for (int i = 0; i < maxRings; i++)

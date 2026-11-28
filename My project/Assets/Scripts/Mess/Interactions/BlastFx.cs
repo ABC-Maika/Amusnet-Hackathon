@@ -93,6 +93,34 @@ namespace Amusnet.Mess
             root.AddComponent<FlashFade>().Init(flash);
         }
 
+        // Water splash: droplets thrown up plus a soft foam puff. `size` scales it (1 = a fish-sized splash).
+        public static void Splash(Vector3 pos, float size)
+        {
+            var root = new GameObject("Splash");
+            root.transform.position = pos;
+            Object.Destroy(root, 3f);
+
+            var drops = Make(root.transform, pos, "Droplets");
+            var m = drops.main; m.duration = 0.3f; m.loop = false; m.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
+            m.startSpeed = new ParticleSystem.MinMaxCurve(2f * size, 5f * size); m.startSize = new ParticleSystem.MinMaxCurve(0.07f * size, 0.16f * size);
+            m.gravityModifier = 1.6f; m.startColor = new Color(0.85f, 0.95f, 1f, 0.9f);
+            var e = drops.emission; e.rateOverTime = 0f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(22 * size)) });
+            var s = drops.shape; s.shapeType = ParticleSystemShapeType.Cone; s.angle = 28f; s.radius = 0.3f * size;
+            s.rotation = new Vector3(-90f, 0f, 0f);
+            var c = drops.colorOverLifetime; c.enabled = true; c.color = Fade(Color.white, new Color(0.8f, 0.92f, 1f));
+            drops.Play();
+
+            var foam = Make(root.transform, pos, "Foam");
+            m = foam.main; m.duration = 0.3f; m.loop = false; m.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            m.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.6f); m.startSize = new ParticleSystem.MinMaxCurve(0.6f * size, 1.1f * size);
+            m.startColor = new Color(1f, 1f, 1f, 0.5f);
+            e = foam.emission; e.rateOverTime = 0f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(8 * size)) });
+            s = foam.shape; s.shapeType = ParticleSystemShapeType.Circle; s.radius = 0.4f * size;
+            s.rotation = new Vector3(-90f, 0f, 0f);
+            c = foam.colorOverLifetime; c.enabled = true; c.color = Fade(Color.white, Color.white);
+            foam.Play();
+        }
+
         // Looping sparks for a lit fuse.
         public static GameObject FuseSparks(Transform parent, Vector3 localPos)
         {
