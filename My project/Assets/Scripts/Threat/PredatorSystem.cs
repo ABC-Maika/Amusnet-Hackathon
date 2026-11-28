@@ -56,6 +56,12 @@ public class PredatorSystem : MonoBehaviour
         else Debug.LogWarning("PredatorSystem: no player assigned or found; the meter will not move.", this);
     }
 
+    public void Track(Transform butterfly)
+    {
+        player = butterfly;
+        shelter = butterfly.GetComponent<Amusnet.World.ShelterState>();
+    }
+
     void Update()
     {
         var flow = GameFlow.Instance;

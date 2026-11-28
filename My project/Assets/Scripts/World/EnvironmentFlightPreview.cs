@@ -23,6 +23,8 @@ namespace Amusnet.World
         CharacterController mover;
         ShelterState shelter;
         MessManager mess;
+        GameFlow flow;
+        Transform cameraPose;
         readonly Collider[] nearby = new Collider[16];
         readonly Queue<(string label, int points, float expiresAt)> recentMess = new();
         Interactable[][] districtProps;
@@ -66,6 +68,36 @@ namespace Amusnet.World
             restartDistrict = null;
         }
 
+        public void AttachToRun(GameFlow gameFlow, Camera output, Transform pose)
+        {
+            flow = gameFlow;
+            view = output;
+            cameraPose = pose;
+            mess.Flow = gameFlow;
+            mess.ScoreChanged += UpdateRunScore;
+            flow.StateChanged += OnRunState;
+            OnRunState(flow.Current);
+            UpdateRunScore(mess.Score);
+            UpdateCamera();
+        }
+
+        private void OnRunState(GameFlow.State state)
+        {
+            // Leave the capsule in place during pause so it keeps contact with nearby shelters.
+            if (state == GameFlow.State.Menu) mover.enabled = false;
+            if (state == GameFlow.State.Playing)
+            {
+                mover.enabled = true;
+                mess.BeginRun();
+            }
+        }
+
+        private void UpdateRunScore(int score)
+        {
+            if (GameHUD.Instance) GameHUD.Instance.SetMess((float)score / mess.GoalScore);
+            if (mess.HasReachedGoal) flow.Win();
+        }
+
         private void Visit(Transform district)
         {
             var destination = district.GetComponent<MarketDistrict>();
@@ -93,6 +125,12 @@ namespace Amusnet.World
         {
             if (mess) mess.MessCreated -= ShowAward;
             recentMess.Clear();
+        }
+
+        void OnDestroy()
+        {
+            if (flow) flow.StateChanged -= OnRunState;
+            if (mess) mess.ScoreChanged -= UpdateRunScore;
         }
 
         void ShowAward(Interactable source, int points)
@@ -125,6 +163,7 @@ namespace Amusnet.World
         }
         void Update()
         {
+            if (flow && !flow.IsRunning) return;
             var k = Keyboard.current;
             if (k == null) return;
             if (!comboTest && districts.Length > 0 && k.tabKey.wasPressedThisFrame)
@@ -132,7 +171,8 @@ namespace Amusnet.World
             if (!comboTest && mess && k.rKey.wasPressedThisFrame)
             {
                 if (marketView) restartDistrict = ClosestDistrict()?.name;
-                SceneManager.LoadScene(gameObject.scene.path);
+                if (flow) flow.Restart();
+                else SceneManager.LoadScene(gameObject.scene.path);
                 return;
             }
             float x = (k.dKey.isPressed ? 1 : 0) - (k.aKey.isPressed ? 1 : 0);
@@ -155,8 +195,13 @@ namespace Amusnet.World
         }
         void LateUpdate()
         {
-            CheckInteractionVolumes();
+            if (!flow || flow.IsRunning) CheckInteractionVolumes();
             if (comboTest) return;
+            UpdateCamera();
+        }
+
+        private void UpdateCamera()
+        {
             Vector3 focus = transform.position;
             if (marketView)
             {
@@ -169,8 +214,9 @@ namespace Amusnet.World
                 cameraBias = Vector3.Lerp(cameraBias, bias, 1f - Mathf.Exp(-3.3f * Time.deltaTime));
                 focus += cameraBias;
             }
-            view.transform.position = focus + (marketView ? new Vector3(1.45f + crane * 3.15f, 3.15f + 3.35f * crane, -5.8f - crane * .55f) : new Vector3(0, 4f, -7f));
-            view.transform.LookAt(focus + Vector3.forward * 1.8f);
+            var pose = cameraPose ? cameraPose : view.transform;
+            pose.position = focus + (marketView ? new Vector3(1.45f + crane * 3.15f, 3.15f + 3.35f * crane, -5.8f - crane * .55f) : new Vector3(0, 4f, -7f));
+            pose.LookAt(focus + Vector3.forward * 1.8f);
             view.backgroundColor = RenderSettings.fogColor;
         }
         void CheckInteractionVolumes()
@@ -193,7 +239,7 @@ namespace Amusnet.World
         }
         void OnGUI()
         {
-            if (comboTest) return;
+            if (comboTest || (flow && !flow.IsRunning)) return;
             if (marketView && mess)
             {
                 DrawMarketHud();
@@ -277,6 +323,15 @@ namespace Amusnet.World
                 Panel(new Rect(16, 88, width, 29), ink);
                 GUI.Label(new Rect(26, 92, width, 24), note, noteStyle);
             }
+            if (flow && PredatorSystem.Instance is { } predator &&
+                (predator.IsHidden || predator.Percent >= 55f))
+            {
+                string cover = predator.IsHidden ? "In cover · Predator pressure falling" : "Take cover beneath a large flower";
+                float y = note.Length > 0 ? 121f : 88f;
+                float width = noteStyle.CalcSize(new GUIContent(cover)).x + 22f;
+                Panel(new Rect(16, y, width, 29), ink);
+                GUI.Label(new Rect(26, y + 4f, width, 24), cover, noteStyle);
+            }
             while (impactLabels.Count > 0 && Time.time - impactLabels.Peek().started > 1.12f)
                 impactLabels.Dequeue();
             foreach (var hit in impactLabels)
@@ -303,20 +358,23 @@ namespace Amusnet.World
                 {
                     string record = bestChain >= 8 ? $"Market stunt   ★   {bestChain} in chain" : $"Best chain   {bestChain} / 8";
                     float width = noteStyle.CalcSize(new GUIContent(record)).x + 20f;
-                    Panel(new Rect(Screen.width - width - 16, 14, width, 27), ink);
-                    GUI.Label(new Rect(Screen.width - width - 6, 18, width, 22), record, noteStyle);
+                    float y = flow ? Screen.height - 40f : 14f;
+                    Panel(new Rect(Screen.width - width - 16, y, width, 27), ink);
+                    GUI.Label(new Rect(Screen.width - width - 6, y + 4f, width, 22), record, noteStyle);
                 }
             }
             const string controls = "WASD fly   ·   Space / Shift height   ·   Tab map   ·   R restart";
             float line = noteStyle.CalcSize(new GUIContent(controls)).x + 20f;
-            Panel(new Rect(16, Screen.height - 40, line, 26), ink);
-            GUI.Label(new Rect(25, Screen.height - 37, line, 22), controls, noteStyle);
+            float controlsY = Screen.height - (flow ? 74f : 40f);
+            Panel(new Rect(16, controlsY, line, 26), ink);
+            GUI.Label(new Rect(25, controlsY + 3f, line, 22), controls, noteStyle);
         }
 
         private void DrawDistrictMap()
         {
-            float size = Mathf.Min(Screen.width - 28f, Screen.height - 64f, 475f);
-            var frame = new Rect(Screen.width - size - 14f, 16f, size, size);
+            float top = flow ? 125f : 16f;
+            float size = Mathf.Min(Screen.width - 28f, Screen.height - top - 14f, 475f);
+            var frame = new Rect(Screen.width - size - 14f, top, size, size);
             GUI.Box(frame, marketView ? "Choose a district to fly there" : "Village districts");
             var map = new Rect(frame.x + 56f, frame.y + 43f, size - 112f, size - 100f);
             for (int index = 0; index < districts.Length; index++)

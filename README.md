@@ -1,8 +1,8 @@
 # Amusnet-Hackathon
 
-Open `My project/Assets/Scenes/Sprint3Village.unity` and press Play. The butterfly starts facing the cider stall in Village Center.
+Open `My project/Assets/Scenes/MainMenu.unity` in Unity and enter Play mode. Click **Play** in the main menu to start the Sprint 3 run facing the cider stall in Village Center. For a direct scene preview, open `Sprint3Village.unity`.
 
-**WASD** moves the butterfly. **Space / Left Shift** change height. **E** sends a gust toward a nearby prop. Fly into a prop to touch it directly. Press **Tab** and click a district to fly to its starting point with your score intact. **R** starts a fresh run in the current district.
+**WASD** moves the butterfly. **Space / Left Shift** change height. **E** sends a gust toward a nearby prop. Fly into a prop to touch it directly. Press **Tab** and click a district to fly to its starting point with your score intact. **R** starts a fresh run in the current district. In the main menu flow, **Esc** pauses the run and landing under large flower shelters helps you lose the predator.
 
 ## Repeatable combo tests
 

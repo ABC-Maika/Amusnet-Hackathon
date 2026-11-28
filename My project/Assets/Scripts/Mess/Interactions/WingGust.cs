@@ -57,6 +57,7 @@ namespace Amusnet.Mess
 
         private void Update()
         {
+            if (!mess.CanInteract) return;
             if (Time.time >= nextScan)
             {
                 SelectTarget();
@@ -98,7 +99,7 @@ namespace Amusnet.Mess
 
         public bool Pulse()
         {
-            if (Time.time < readyAt) return false;
+            if (!mess.CanInteract || Time.time < readyAt) return false;
             SelectTarget();
             readyAt = Time.time + 1.15f;
             stroke = 1f;
