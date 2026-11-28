@@ -6,15 +6,24 @@ namespace Amusnet.ChickenEscape
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class EscapeKeeper : MonoBehaviour
     {
-        public enum PatrolState { Patrolling, Investigating, Distracted, Pursuing, Windup, Lunging, ClosingGate, Recovering }
+        public enum PatrolState
+        {
+            Patrolling, Investigating, Distracted, Pursuing, Windup, Lunging, ClosingGate, Recovering,
+            ScoopingHen, CarryingHen, PuttingHenDown, CorneringDog, HoldingDog
+        }
 
         public const float SightRange = 6.7f;
         public const float SightAngle = 47f;
         public const float EyeHeight = .80f;
 
         const float BarkHearing = 11f;
-        const float GrabDistance = 1.12f;
+        const float HenGrabDistance = 1.12f;
+        const float DogReach = 1.48f;
+        const float DogWarningTime = 1.3f;
+        const float DogRescueTime = 6f;
         const float WindupTime = .52f;
+        const float ScoopTime = .81f;
+        const float SetDownTime = .62f;
         static readonly float ViewDot = Mathf.Cos(SightAngle * Mathf.Deg2Rad);
         static readonly Vector3[] Patrol = {
             new(6.05f, 0f, 1.35f), new(4.85f, 0f, -4.75f), new(1.6f, 0f, -5.44f),
@@ -22,25 +31,34 @@ namespace Amusnet.ChickenEscape
         };
 
         [SerializeField] Animator animator;
+        [SerializeField] Transform returnApproach, holdingPen;
 
         NavMeshAgent agent;
-        EscapeHen quarry;
+        EscapeKeeperRig rig;
+        EscapeHen quarry, inHands;
+        EscapeDog heldDog, dogInReach;
         Vector3 barkPoint, decoyPoint, lastSeen, strikePoint;
-        float proceedsAt, nextPathAt, barkUntil, decoyUntil, tracksUntil;
-        int waypoint, pose;
-        bool started, huntingDog;
+        Vector3 henPositionOnGrab, dropPoint, firstPosition;
+        float proceedsAt, nextPathAt, barkUntil, decoyUntil, tracksUntil, dogReachTime;
+        int waypoint, pose, pennedHens;
+        bool started;
 
         public PatrolState Current { get; private set; }
-        public bool HasSpottedSomeone => Current is PatrolState.Pursuing or PatrolState.Windup or PatrolState.Lunging;
+        public bool HasSpottedSomeone => Current is PatrolState.Pursuing or PatrolState.Windup or PatrolState.Lunging
+            or PatrolState.CorneringDog or PatrolState.HoldingDog;
         public bool IsDistracted => Current == PatrolState.Distracted;
+        public bool IsHandlingHen => inHands != null;
         public Vector3 Eye => transform.position + Vector3.up * EyeHeight;
-        public Vector3 HoldingPoint { get; private set; }
         public Vector3 StrikePoint => strikePoint;
+        public float DogPressure => Mathf.Clamp01(dogReachTime / DogWarningTime);
+        public float DogRescueRemaining => heldDog ? Mathf.Max(0f, proceedsAt - Time.time) : 0f;
+        public bool DogSecured => heldDog && Time.time >= proceedsAt;
 
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
-            HoldingPoint = transform.position + new Vector3(.25f, 0f, 1.05f);
+            rig = new EscapeKeeperRig(animator, transform);
+            firstPosition = transform.position;
         }
 
         public bool HearBark(Vector3 point)
@@ -54,20 +72,34 @@ namespace Amusnet.ChickenEscape
 
         public bool TryDistract(Vector3 point)
         {
-            if (!started || Current is PatrolState.Windup or PatrolState.Lunging ||
+            if (!started || IsHandlingHen ||
+                Current is PatrolState.Windup or PatrolState.Lunging or PatrolState.HoldingDog ||
                 !Within(point, 15f) || !NavMesh.SamplePosition(point, out var ground, 1.3f, agent.areaMask))
                 return false;
 
             decoyPoint = ground.position;
             decoyUntil = Time.time + 5.3f;
             tracksUntil = 0f;
+            dogReachTime = 0f;
             return true;
+        }
+
+        public void ReleaseDog()
+        {
+            if (!heldDog) return;
+            heldDog.BreakLoose();
+            heldDog = null;
+            dogInReach = null;
+            dogReachTime = 0f;
+            barkUntil = 0f;
+            Recover(1.75f, "Startle");
         }
 
         public EscapeHen Step(EscapeDog dog, EscapeGate gate, EscapeHen[] flock, bool heist,
             bool hensInPen, bool passageBlocked)
         {
             if (!heist || !agent.isOnNavMesh) return null;
+            rig?.Restore();
             if (!started)
             {
                 started = true;
@@ -75,18 +107,26 @@ namespace Amusnet.ChickenEscape
                 agent.angularSpeed = 640f;
             }
 
+            if (heldDog)
+            {
+                heldDog.PullToward(transform.position);
+                Face(heldDog.transform.position);
+                return null;
+            }
+            if (inHands)
+            {
+                ReturnHen();
+                return null;
+            }
+
             if (Current == PatrolState.Windup)
             {
                 Face(strikePoint);
-                if (Time.time >= proceedsAt)
-                {
-                    ChangeState(PatrolState.Lunging);
-                    proceedsAt = Time.time + .63f;
-                }
-                else return null;
+                if (Time.time < proceedsAt) return null;
+                ChangeState(PatrolState.Lunging);
+                proceedsAt = Time.time + .63f;
             }
-
-            if (Current == PatrolState.Lunging) return Lunge(dog);
+            if (Current == PatrolState.Lunging) return Lunge();
             if (Current == PatrolState.Recovering && Time.time < proceedsAt) return null;
 
             if (Time.time < decoyUntil)
@@ -95,20 +135,29 @@ namespace Amusnet.ChickenEscape
                 return null;
             }
 
+            Vector3 dogPosition = dog.transform.position;
+            if (dog.CanBeCaught && Within(dogPosition, DogReach) && ClearTo(dogPosition))
+            {
+                CornerDog(dog);
+                return null;
+            }
+
+            dogInReach = null;
+            dogReachTime = Mathf.MoveTowards(dogReachTime, 0f, 2.6f * Time.deltaTime);
             EscapeHen hen = VisibleHen(flock);
-            bool seesDog = !dog.IsStopped && CanSee(dog.transform.position);
+            bool seesDog = dog.CanBeCaught && CanSee(dogPosition);
             if (hen || seesDog)
             {
                 quarry = hen;
-                huntingDog = !hen;
-                lastSeen = hen ? hen.transform.position : dog.transform.position;
+                lastSeen = hen ? hen.transform.position : dogPosition;
                 tracksUntil = Time.time + 1.8f;
-                if (Within(lastSeen, 2.25f))
+                if (hen && Within(lastSeen, 2.25f))
                 {
+                    dogReachTime = 0f;
                     ChangeState(PatrolState.Windup);
                     strikePoint = lastSeen;
                     proceedsAt = Time.time + WindupTime;
-                    Stop("Protest");
+                    Stop("Watch");
                 }
                 else Go(PatrolState.Pursuing, lastSeen, 5.18f);
             }
@@ -131,6 +180,23 @@ namespace Amusnet.ChickenEscape
             return null;
         }
 
+        void CornerDog(EscapeDog dog)
+        {
+            dogInReach = dog;
+            dogReachTime += Time.deltaTime;
+            lastSeen = dog.transform.position;
+            tracksUntil = Time.time + 1.8f;
+            Face(lastSeen);
+            Stop("Watch");
+            ChangeState(PatrolState.CorneringDog);
+            if (dogReachTime < DogWarningTime) return;
+
+            dog.Grab(transform.position);
+            heldDog = dog;
+            ChangeState(PatrolState.HoldingDog);
+            proceedsAt = Time.time + DogRescueTime;
+        }
+
         EscapeHen VisibleHen(EscapeHen[] flock)
         {
             EscapeHen nearest = null;
@@ -146,34 +212,123 @@ namespace Amusnet.ChickenEscape
             return nearest;
         }
 
-        EscapeHen Lunge(EscapeDog dog)
+        EscapeHen Lunge()
         {
-            Go(PatrolState.Lunging, strikePoint, 7.15f, .06f);
-            EscapeHen captured = null;
-            bool hit = false;
-            if (huntingDog)
+            Go(PatrolState.Lunging, strikePoint, 7.15f, .10f);
+            if (quarry && !quarry.Caught && !quarry.Saved && !MarketEscapeRun.InPen(quarry.transform.position) &&
+                Within(quarry.transform.position, HenGrabDistance) && ClearTo(quarry.transform.position))
             {
-                if (!dog.IsStopped && Within(dog.transform.position, GrabDistance) && ClearTo(dog.transform.position))
-                {
-                    dog.Hesitate();
-                    hit = true;
-                }
+                henPositionOnGrab = quarry.transform.position;
+                inHands = quarry;
+                inHands.Lift();
+                ChangeState(PatrolState.ScoopingHen);
+                proceedsAt = Time.time + ScoopTime;
+                tracksUntil = 0f;
+                return inHands;
             }
-            else if (quarry && !quarry.Caught && !quarry.Saved && !MarketEscapeRun.InPen(quarry.transform.position) &&
-                Within(quarry.transform.position, GrabDistance) && ClearTo(quarry.transform.position))
+            if (Time.time >= proceedsAt) Recover(.78f, "Watch");
+            return null;
+        }
+
+        void ReturnHen()
+        {
+            if (Current == PatrolState.ScoopingHen)
             {
-                captured = quarry;
-                hit = true;
+                if (Progress(ScoopTime) < .29f) Go(PatrolState.ScoopingHen, henPositionOnGrab, 3.2f, .68f);
+                else
+                {
+                    Stop("Watch");
+                    Face(henPositionOnGrab);
+                }
+                if (Time.time < proceedsAt) return;
             }
 
-            if (hit || Time.time >= proceedsAt)
+            if (Current != PatrolState.PuttingHenDown)
             {
-                ChangeState(PatrolState.Recovering);
-                proceedsAt = Time.time + (captured ? 1.85f : hit ? 1.24f : .92f);
-                tracksUntil = 0f;
-                Stop(hit ? "Protest" : "Watch");
+                Vector3 approach = returnApproach ? returnApproach.position : firstPosition;
+                Go(PatrolState.CarryingHen, approach, 4.08f, .28f);
+                if (!Within(approach, .54f)) return;
+
+                Vector3 pen = holdingPen ? holdingPen.position : firstPosition + Vector3.forward;
+                int slot = pennedHens++;
+                dropPoint = pen + new Vector3((slot % 3 - 1) * .41f, 0f, slot / 3 * .32f);
+                Stop("Watch");
+                ChangeState(PatrolState.PuttingHenDown);
+                proceedsAt = Time.time + SetDownTime;
             }
-            return captured;
+
+            Face(dropPoint);
+            if (Time.time < proceedsAt) return;
+            inHands.ReleaseInPen(dropPoint);
+            inHands = null;
+            Recover(.42f, "Watch");
+        }
+
+        void LateUpdate()
+        {
+            if (Time.deltaTime <= 0f) return;
+            rig ??= new EscapeKeeperRig(animator, transform);
+            switch (Current)
+            {
+                case PatrolState.Windup:
+                {
+                    float ready = Ease(Progress(WindupTime));
+                    rig.Cradle(strikePoint + Vector3.up * .46f, ready * .48f, ready * .85f);
+                    break;
+                }
+                case PatrolState.Lunging:
+                    rig.Cradle(strikePoint + Vector3.up * .38f, .55f, .92f);
+                    break;
+                case PatrolState.ScoopingHen:
+                    PoseScoop();
+                    break;
+                case PatrolState.CarryingHen:
+                {
+                    Vector3 grip = rig.Cradle(ChestGrip, 0f, 1f);
+                    inHands.CarryAt(grip - Vector3.up * .20f, transform.forward, .28f);
+                    break;
+                }
+                case PatrolState.PuttingHenDown:
+                {
+                    float down = Ease(Progress(SetDownTime));
+                    Vector3 grip = rig.Cradle(Vector3.Lerp(ChestGrip, dropPoint + Vector3.up * .24f, down), down, 1f);
+                    inHands.CarryAt(grip - Vector3.up * .19f, transform.forward, .32f * (1f - down));
+                    break;
+                }
+                case PatrolState.CorneringDog when dogInReach:
+                    rig.HoldCollar(dogInReach.Collar, Ease(DogPressure) * .82f);
+                    break;
+                case PatrolState.HoldingDog when heldDog:
+                    rig.HoldCollar(heldDog.Collar, Mathf.Lerp(.82f, 1f, Ease(Progress(DogRescueTime) * 14f)));
+                    break;
+            }
+        }
+
+        void PoseScoop()
+        {
+            float progress = Progress(ScoopTime);
+            float lift = Ease(Mathf.InverseLerp(.24f, 1f, progress));
+            float crouch = Mathf.Lerp(.6f, 1f, Ease(progress * 4.4f)) * (1f - lift);
+            Vector3 contact = henPositionOnGrab + Vector3.up * .27f;
+            Vector3 grip = rig.Cradle(Vector3.Lerp(contact, ChestGrip, lift), crouch, 1f);
+            Vector3 raised = grip - Vector3.up * .20f;
+            raised.y = Mathf.Max(henPositionOnGrab.y, raised.y);
+            Vector3 henPosition = Vector3.Lerp(henPositionOnGrab, raised, Ease(Mathf.InverseLerp(.17f, .47f, progress)));
+            inHands.CarryAt(henPosition, transform.forward, Mathf.Lerp(1f, .28f, lift));
+        }
+
+        Vector3 ChestGrip => transform.position + transform.forward * .44f + Vector3.up * 1.12f;
+
+        float Progress(float duration) => Mathf.Clamp01(1f - (proceedsAt - Time.time) / duration);
+
+        static float Ease(float value) => Mathf.SmoothStep(0f, 1f, value);
+
+        void Recover(float delay, string nextPose)
+        {
+            ChangeState(PatrolState.Recovering);
+            proceedsAt = Time.time + delay;
+            tracksUntil = 0f;
+            Stop(nextPose);
         }
 
         public bool CanSee(Vector3 position)

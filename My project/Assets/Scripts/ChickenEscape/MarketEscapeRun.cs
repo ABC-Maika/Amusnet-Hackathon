@@ -8,7 +8,7 @@ namespace Amusnet.ChickenEscape
     public sealed class MarketEscapeRun : MonoBehaviour
     {
         public enum Phase { MeetDog, Trust, Farm, Won, Lost }
-        public enum Finish { Left, Lockdown, FlockAccountedFor, TooManyCaught }
+        public enum Finish { Left, Lockdown, FlockAccountedFor, TooManyCaught, DogSecured }
 
         public const int FlockLimit = 3;
         public const int RescueTarget = 3;
@@ -25,12 +25,12 @@ namespace Amusnet.ChickenEscape
         [SerializeField] NavMeshObstacle laundryObstacle;
         [SerializeField] ParticleSystem barkWave, rescueBurst;
         [SerializeField] AudioSource audioSource;
-        [SerializeField] AudioClip barkSound, latchSound, rescueSound, switchSound, alertSound;
+        [SerializeField] AudioClip barkSound, latchSound, rescueSound, switchSound, alertSound, henSquawk;
         [SerializeField, Min(20f)] float chaseDuration = 48f;
 
         static bool skipBondOnRetry;
-        bool dragging, laundryMoved, hensInPen = true, loading;
-        float trustedAt, gustAt, capturedAt = float.NegativeInfinity;
+        bool dragging, laundryMoved, hensInPen = true, loading, dogWasCaught;
+        float trustedAt, gustAt, dogGrabbedAt, capturedAt = float.NegativeInfinity;
         Vector3 decoy;
         float decoyUntil;
 
@@ -50,14 +50,20 @@ namespace Amusnet.ChickenEscape
         public float BarkCharge => dog.BarkCharge;
         public float GustRemaining => Mathf.Max(0f, gustAt - Time.time);
         public Vector3 ActorPosition => IsButterfly ? butterfly.transform.position : dog.transform.position;
-        public Vector3 LookAhead => IsButterfly ? Vector3.forward * .38f : dog.Velocity * .19f;
+        bool FramingGrab => DogCaptured && Time.time < dogGrabbedAt + .62f;
+        public Vector3 CameraTarget => FramingGrab ? (dog.transform.position + keeper.transform.position) * .5f : ActorPosition;
+        public Vector3 LookAhead => FramingGrab ? Vector3.zero : IsButterfly ? Vector3.forward * .38f : dog.Velocity * .19f;
         public bool CanUseLatch => Current == Phase.Farm && IsButterfly && gate.CanUnlatch(ActorPosition);
         public bool CanUntieDog => Current == Phase.MeetDog && (ActorPosition - dog.TetherKnot).sqrMagnitude < 1.9f * 1.9f;
         public bool CanGrabLaundry => dragging || (laundry.position - dog.transform.position).sqrMagnitude < 1.85f * 1.85f;
         public bool Dragging => dragging;
         public bool GateOpen => gate.IsOpen;
         public bool GateNeedsOpening => !gate.IsOpen && hensInPen;
-        public bool DogStopped => dog.IsStopped;
+        public bool DogCaptured => dog.IsCaptured;
+        public bool CanFreeDog => IsButterfly && DogCaptured &&
+            (butterfly.transform.position - dog.Collar).sqrMagnitude < 2.35f * 2.35f &&
+            !Physics.Linecast(butterfly.transform.position, dog.Collar,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         public bool JustCaught => Time.time - capturedAt < 1.7f;
         public bool CanLeave => !IsButterfly && Saved > 0 && TryExit(dog.transform.position, out _);
         public EscapeKeeper Keeper => keeper;
@@ -111,7 +117,7 @@ namespace Amusnet.ChickenEscape
             var movement = ReadMovement(keys);
             if (Current == Phase.Farm)
             {
-                if (keys?.fKey.wasPressedThisFrame == true) Switch();
+                if (!DogCaptured && keys?.fKey.wasPressedThisFrame == true) Switch();
                 if (keys?.eKey.wasPressedThisFrame == true)
                 {
                     if (IsButterfly) UseGust();
@@ -141,17 +147,25 @@ namespace Amusnet.ChickenEscape
             MoveFlock();
             if (Current != Phase.Farm) return;
 
+            if (keeper.DogSecured)
+            {
+                End(Finish.DogSecured);
+                return;
+            }
             if (AlarmActive)
             {
                 Elapsed = Mathf.Min(chaseDuration, Elapsed + Time.deltaTime);
                 if (Elapsed >= chaseDuration)
                 {
-                    End(Finish.Lockdown);
+                    End(DogCaptured ? Finish.DogSecured : Finish.Lockdown);
                     return;
                 }
             }
-            if (Saved + Caught == Total) End(Finish.FlockAccountedFor);
-            else if (Total - Caught < RescueTarget) End(Finish.TooManyCaught);
+            if (!DogCaptured && !keeper.IsHandlingHen)
+            {
+                if (Saved + Caught == Total) End(Finish.FlockAccountedFor);
+                else if (Total - Caught < RescueTarget) End(Finish.TooManyCaught);
+            }
         }
 
         static Vector2 ReadMovement(Keyboard keys)
@@ -175,7 +189,7 @@ namespace Amusnet.ChickenEscape
             bool passageBlocked = gate.InPassage(lead, .28f);
             foreach (var hen in flock)
             {
-                if (hen.Saved) continue;
+                if (hen.Saved || hen.InHands) continue;
                 bool pathOpen = gate.IsOpen || InPen(hen.transform.position) == InPen(lead);
                 hen.Step(followGoal, flock, pathOpen, leadingOut);
                 Vector3 position = hen.transform.position;
@@ -191,13 +205,21 @@ namespace Amusnet.ChickenEscape
 
             var taken = keeper.Step(dog, gate, flock, Current == Phase.Farm, hensInPen, passageBlocked);
             if (keeper.HasSpottedSomeone) RaiseAlarm();
+            if (DogCaptured && !dogWasCaught)
+            {
+                dogGrabbedAt = Time.time;
+                if (!IsButterfly) Switch();
+                foreach (var hen in flock) hen.ScatterFrom(dog.transform.position);
+                Following = 0;
+                audioSource.PlayOneShot(barkSound, .82f);
+            }
+            dogWasCaught = DogCaptured;
             if (!taken) return;
 
-            taken.CatchAt(keeper.HoldingPoint + Vector3.right * ((Caught % 3) - 1) * .48f);
             Following--;
             Caught++;
             capturedAt = Time.time;
-            audioSource.PlayOneShot(alertSound, .65f);
+            if (henSquawk) audioSource.PlayOneShot(henSquawk, .8f);
         }
 
         void UntieDog()
@@ -220,7 +242,13 @@ namespace Amusnet.ChickenEscape
 
         void UseGust()
         {
-            if (CanUseLatch)
+            if (CanFreeDog)
+            {
+                butterfly.GustAt(dog.Collar);
+                keeper.ReleaseDog();
+                audioSource.PlayOneShot(latchSound, .73f);
+            }
+            else if (CanUseLatch)
             {
                 butterfly.GustAt(gate.Latch);
                 gate.SetOpen(true);
@@ -316,7 +344,7 @@ namespace Amusnet.ChickenEscape
         void End(Finish reason)
         {
             FinishedBy = reason;
-            Current = Saved >= RescueTarget ? Phase.Won : Phase.Lost;
+            Current = reason != Finish.DogSecured && Saved >= RescueTarget ? Phase.Won : Phase.Lost;
             Time.timeScale = 0f;
         }
 
@@ -345,6 +373,7 @@ namespace Amusnet.ChickenEscape
         public Vector3 PrimaryMarker()
         {
             if (Current == Phase.MeetDog) return dog.TetherKnot + Vector3.up * .45f;
+            if (DogCaptured) return dog.Collar + Vector3.up * .52f;
             if (Current != Phase.Farm || !GateNeedsOpening || !IsButterfly) return Vector3.zero;
             return (ActorPosition.z > 2.24f ? gate.Latch : gate.Access) + Vector3.up * .28f;
         }

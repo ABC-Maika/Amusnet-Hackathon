@@ -46,8 +46,8 @@ namespace Amusnet.ChickenEscape
             bool show = run.Current == MarketEscapeRun.Phase.Farm && !run.IsPaused;
             bool aboutToGrab = keeper.Current is EscapeKeeper.PatrolState.Windup or EscapeKeeper.PatrolState.Lunging;
             strikeRenderer.enabled = show && aboutToGrab;
-            coneRenderer.enabled = show && !aboutToGrab;
-            if (!show) return;
+            coneRenderer.enabled = show && !aboutToGrab && !keeper.IsHandlingHen && !run.DogCaptured;
+            if (!strikeRenderer.enabled && !coneRenderer.enabled) return;
             if (aboutToGrab)
             {
                 Vector3 center = keeper.StrikePoint;

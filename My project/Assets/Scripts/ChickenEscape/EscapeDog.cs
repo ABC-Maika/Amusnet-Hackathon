@@ -12,21 +12,23 @@ namespace Amusnet.ChickenEscape
         static readonly int Speed = Animator.StringToHash("Speed");
         CharacterController motor;
         Vector3 velocity;
-        Vector3 bondDirection;
+        Vector3 bondDirection, gripDirection;
         GameObject leash;
         float vertical;
         float barkAt;
-        float heldUntil;
         float bondedAt = float.NegativeInfinity;
         float recoverAt;
+        float safeUntil;
         bool exhausted;
 
         public Vector3 Velocity => velocity;
         public float BarkCharge => Mathf.Clamp01(1f - (barkAt - Time.time) / BarkCooldown);
         public float Stamina { get; private set; } = 1f;
-        public bool IsStopped => Time.time < heldUntil;
+        public bool IsCaptured { get; private set; }
+        public bool CanBeCaught => !IsCaptured && Time.time >= safeUntil;
         public Vector3 TetherKnot { get; private set; }
         public Vector3 Nose => transform.position + transform.forward * .61f + Vector3.up * .52f;
+        public Vector3 Collar => transform.position + transform.forward * .34f + Vector3.up * .54f;
 
         void Awake() => motor = GetComponent<CharacterController>();
 
@@ -69,7 +71,13 @@ namespace Amusnet.ChickenEscape
 
         public void Step(Vector2 input, bool sprint, bool controlled, bool dragging)
         {
-            if (IsStopped) input = Vector2.zero;
+            if (IsCaptured)
+            {
+                float struggle = Time.time * 15f;
+                model.localRotation = Quaternion.Euler(11f + 5f * Mathf.Sin(struggle), 0f, 14f * Mathf.Sin(struggle * .8f));
+                animator.SetFloat(Speed, .22f, .09f, Time.deltaTime);
+                return;
+            }
             Vector3 direction = new(input.x, 0f, input.y);
             bool moving = direction.sqrMagnitude > .01f;
             if (!sprint && Stamina > .18f) exhausted = false;
@@ -106,19 +114,37 @@ namespace Amusnet.ChickenEscape
 
         public bool Bark()
         {
-            if (Time.time < barkAt || IsStopped) return false;
+            if (Time.time < barkAt || IsCaptured) return false;
             barkAt = Time.time + BarkCooldown;
             return true;
         }
 
-        public void Hesitate()
+        public void Grab(Vector3 keeper)
         {
-            if (IsStopped) return;
-            heldUntil = Time.time + 1.1f;
-            Stamina = Mathf.Max(0f, Stamina - .28f);
-            exhausted |= Stamina <= 0f;
-            recoverAt = Time.time + 1.1f;
-            velocity *= .18f;
+            IsCaptured = true;
+            velocity = Vector3.zero;
+            Stamina = Mathf.Max(0f, Stamina - .32f);
+            Vector3 toKeeper = Vector3.ProjectOnPlane(keeper - transform.position, Vector3.up);
+            Vector3 sideways = Vector3.Cross(Vector3.up, toKeeper.normalized);
+            if (Vector3.Dot(transform.forward, sideways) < 0f) sideways = -sideways;
+            gripDirection = sideways.sqrMagnitude > .01f ? sideways : transform.forward;
+        }
+
+        public void PullToward(Vector3 keeper)
+        {
+            Vector3 away = Vector3.ProjectOnPlane(transform.position - keeper, Vector3.up);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(gripDirection), 395f * Time.deltaTime);
+            if (away.magnitude <= .60f) return;
+            Vector3 pull = Vector3.ClampMagnitude(-away.normalized * (away.magnitude - .60f), 2.6f * Time.deltaTime);
+            motor.Move(pull + Vector3.down * (2f * Time.deltaTime));
+        }
+
+        public void BreakLoose()
+        {
+            IsCaptured = false;
+            safeUntil = Time.time + 1.75f;
+            Stamina = Mathf.Max(.38f, Stamina);
+            exhausted = false;
         }
     }
 }

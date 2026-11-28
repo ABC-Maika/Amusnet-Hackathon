@@ -14,13 +14,14 @@ namespace Amusnet.ChickenEscape
         readonly Vector3[] corners = new Vector3[16];
         CharacterController motor;
         NavMeshPath path;
-        Vector3 home, motion, holdingPoint;
-        float nextPathAt, calledAt, vertical, idlePhase;
+        Vector3 home, motion, scatterTo;
+        float nextPathAt, calledAt, scatterUntil, vertical, idlePhase;
         int corner, cornerCount;
 
         public bool Saved { get; private set; }
         public bool Caught { get; private set; }
         public bool Following { get; private set; }
+        public bool InHands { get; private set; }
 
         void Awake()
         {
@@ -32,16 +33,14 @@ namespace Amusnet.ChickenEscape
 
         public void Step(Vector3 target, EscapeHen[] flock, bool pathOpen, bool enterExit)
         {
-            if (Saved) return;
+            if (Saved || InHands) return;
             Vector3 steer = Vector3.zero;
             float speed = 0f;
-            if (Caught)
+            if (Time.time < scatterUntil)
             {
-                if (Flat(holdingPoint - transform.position).sqrMagnitude > .4f)
-                {
-                    steer = FollowPath(holdingPoint);
-                    speed = 3.6f;
-                }
+                steer = FollowPath(scatterTo);
+                speed = 4.4f;
+                home = transform.position;
             }
             else if (Following)
             {
@@ -63,7 +62,7 @@ namespace Amusnet.ChickenEscape
 
             foreach (var other in flock)
             {
-                if (other == this || other.Saved) continue;
+                if (other == this || other.Saved || other.InHands || other.Caught != Caught) continue;
                 Vector3 separation = Flat(transform.position - other.transform.position);
                 float distance = separation.magnitude;
                 if (distance is > .015f and < .64f)
@@ -118,17 +117,44 @@ namespace Amusnet.ChickenEscape
         {
             if (Saved || Caught || Following) return false;
             Following = true;
+            scatterUntil = 0f;
             calledAt = Time.time;
             return true;
         }
 
-        public void CatchAt(Vector3 point)
+        public void ScatterFrom(Vector3 keeper)
         {
+            if (!Following) return;
             Following = false;
-            Caught = true;
-            holdingPoint = point;
+            scatterTo = transform.position + Flat(transform.position - keeper).normalized * 2.5f;
+            scatterUntil = Time.time + 1.05f;
             nextPathAt = 0f;
-            cornerCount = 0;
+        }
+
+        public void Lift()
+        {
+            Caught = true;
+            Following = false;
+            InHands = true;
+            motor.enabled = false;
+            motion = Vector3.zero;
+            vertical = 0f;
+        }
+
+        public void CarryAt(Vector3 position, Vector3 facing, float struggle)
+        {
+            transform.SetPositionAndRotation(position, Quaternion.LookRotation(facing));
+            animator.SetFloat(Speed, .22f + struggle * 1.72f, .06f, Time.deltaTime);
+            model.localRotation = Quaternion.Euler(-8f, 0f, Mathf.Sin(Time.time * 23f) * 24f * struggle);
+        }
+
+        public void ReleaseInPen(Vector3 point)
+        {
+            home = point;
+            transform.position = point;
+            model.localRotation = Quaternion.identity;
+            InHands = false;
+            motor.enabled = true;
         }
 
         static Vector3 Flat(Vector3 vector) => Vector3.ProjectOnPlane(vector, Vector3.up);

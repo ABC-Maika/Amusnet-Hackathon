@@ -53,6 +53,7 @@
 .stamina-track { height: 5px; border-radius: 3px; background-color: #675847; overflow: hidden; }
 .stamina-fill { height: 100%; background-color: #e6bd76; }
 .stamina-fill.spent { background-color: #ef9481; }
+.dog-risk .stamina-label { color: #ffc5b4; -unity-font-style: bold; }
 .prompt {
     position: absolute;
     bottom: 4%;

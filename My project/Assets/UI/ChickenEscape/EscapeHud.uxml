@@ -18,6 +18,12 @@
                     <ui:VisualElement name="stamina-fill" class="stamina-fill" />
                 </ui:VisualElement>
             </ui:VisualElement>
+            <ui:VisualElement name="dog-risk" class="dog-risk stamina" picking-mode="Ignore">
+                <ui:Label name="dog-risk-label" class="stamina-label" />
+                <ui:VisualElement class="stamina-track">
+                    <ui:VisualElement name="dog-risk-fill" class="stamina-fill spent" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label name="guide" class="marker guide" picking-mode="Ignore" />
         <ui:Label name="orchard" text="Orchard gap" class="marker exit" picking-mode="Ignore" />

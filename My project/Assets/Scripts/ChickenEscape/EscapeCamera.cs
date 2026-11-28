@@ -13,13 +13,13 @@ namespace Amusnet.ChickenEscape
         void Start()
         {
             output = GetComponent<Camera>();
-            follow = run.ActorPosition;
+            follow = run.CameraTarget;
             Frame();
         }
 
         void LateUpdate()
         {
-            follow = Vector3.SmoothDamp(follow, run.ActorPosition + run.LookAhead, ref ease,
+            follow = Vector3.SmoothDamp(follow, run.CameraTarget + run.LookAhead, ref ease,
                 run.IsButterfly ? .24f : .17f, 20f, Time.unscaledDeltaTime);
             Frame();
         }
