@@ -38,6 +38,10 @@ namespace Amusnet.World
         public Transform EscapePoint => escapePoint;
         private float GateAngle => Mathf.SmoothStep(0f, 95f, gateTravel);
         private bool IsVillagerAtGate => (villager.position - gateApproach.position).sqrMagnitude < 0.9f * 0.9f;
+        public Vector3 VillagerPosition => villager.position;
+        public bool NeedsGoatBump => !VillagerBumped && !laundry.GoatEscaped;
+        public bool CanGoatApproach => NeedsGoatBump && IsVillagerAtGate &&
+            (phase is Phase.ToLaundry or Phase.HoldingGate);
 
         public bool IsNearSheetDrop(Vector3 goatPosition)
         {
@@ -98,6 +102,11 @@ namespace Amusnet.World
                 case Phase.ToLaundry:
                     if (!IsGateOpen)
                         break;
+                    if (CanGoatApproach)
+                    {
+                        phase = Phase.HoldingGate;
+                        break;
+                    }
                     if (laundry.IsInSheetChase && (laundry.HasGrabbedSheet || IsVillagerAtGate))
                     {
                         phase = Phase.HoldingGate;
@@ -111,7 +120,7 @@ namespace Amusnet.World
                     }
                     break;
                 case Phase.HoldingGate:
-                    if (!laundry.IsInSheetChase)
+                    if (!NeedsGoatBump && !laundry.IsInSheetChase)
                         phase = Phase.ToLaundry;
                     else
                         WalkTo(gateApproach.position, 2.6f);
@@ -134,7 +143,7 @@ namespace Amusnet.World
         {
             stumbleProgress = Mathf.Clamp01(stumbleProgress + Time.deltaTime / 0.65f);
             float slide = Mathf.SmoothStep(0f, 1f, stumbleProgress);
-            walkPlayback = 1.55f * Mathf.Sin(Mathf.PI * stumbleProgress);
+            walkPlayback = 1.55f * Mathf.Max(0f, Mathf.Sin(Mathf.PI * stumbleProgress));
             villager.position = Vector3.Lerp(stumbleStart, stumbleEnd, slide);
             villager.rotation = stumbleFacing * Quaternion.Euler(0f, 0f, -23f * Mathf.Sin(Mathf.PI * stumbleProgress));
             if (stumbleProgress < 1f)

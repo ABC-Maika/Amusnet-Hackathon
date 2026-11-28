@@ -25,6 +25,6 @@ namespace Butterfly.Death
             => Debug.Log($"[Death] {displayName}: landed at {point}");
 
         public override void OnDeathEnd(GameObject b, float legacyGained)
-            => Debug.Log($"[Death] {displayName}: legacy +{legacyGained:0.#}, total {LegacyBank.Total:0.#}");
+            => Debug.Log($"[Death] {displayName}: score +{legacyGained:0.#}");
     }
 }

@@ -1,5 +1,8 @@
 # Death Design (Sprint 4 [E])
 
+> **Update (Sprint 6):** the martyr fall and Rebel Legacy are gone. Predators (bird, frog, river fish) swallow the butterfly; the camera follows them while they digest (3-5 s), then follows their poop (bird, frog or fish poop), whose splat knocks nearby props over for score. Other killers (spider web, swatter, net, zapper lamp) make the butterfly go limp and fall. Recruited allies now boost the mess score multiplier. See `DeathManager.cs`.
+
+
 Status: **proposed defaults**, all values are tunables on `DeathCause` / `DeathManager` / `LegacyBank` / `AngerLevels`. Playtest in Sprint 5 and adjust in Sprint 6.
 
 ## Core idea: the Martyr's Last Flutter
@@ -36,7 +39,7 @@ Hazard locations (web, lamp, pond) are marked by the Sprint 2 [E] task. Place at
 - **Per next run:** mess score is multiplied by `1 + 0.01 x total legacy`, capped at x2.0 (cap reached at 100 legacy, about 4 to 6 deaths).
 - **Cap reason:** the goal is about 15 minutes per run (Sprint 3 [E]); the bonus shortens it but cannot trivialise it.
 - **Display:** after landing the HUD shows `Legacy +N`, and the run start screen shows the current multiplier.
-- **Spirit trail (Sprint 4 [D]):** the next run starts with a ghost trail leading to the previous death's best mess spots. Trail length grows with total legacy (one extra spot per 25 legacy, max 4).
+- **Spirit trail (Sprint 4 [D]):** removed; the next run no longer gets a guide to earlier death spots.
 
 ## Open questions for the team
 - Should legacy reset after a win? (proposal: keep it, a win ends the campaign anyway)

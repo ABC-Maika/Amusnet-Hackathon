@@ -20,15 +20,20 @@ public class GameplayGate : MonoBehaviour
     {
         flow = GameFlow.Instance;
         if (flow != null) flow.StateChanged += OnStateChanged;
+        Butterfly.Death.DeathManager.DeathStarted += OnDeathStarted;
+        Apply();
     }
 
     void OnDestroy()
     {
         if (flow != null) flow.StateChanged -= OnStateChanged;
+        Butterfly.Death.DeathManager.DeathStarted -= OnDeathStarted;
     }
 
     // Still called while this component is disabled (e.g. by the death sequence).
     void OnStateChanged(GameFlow.State _) => Apply();
+
+    void OnDeathStarted(Butterfly.Death.DeathCause _) => Apply();
 
     // WinPending has no event, so poll too.
     void Update()

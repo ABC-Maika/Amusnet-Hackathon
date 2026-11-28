@@ -26,7 +26,6 @@ namespace Butterfly.Death
             telegraphTime = 0.6f;
             cooldown = 3f;
             killDelay = 0.12f;
-            legacyMultiplier = 1.15f;
             launchVelocity = new Vector3(0f, -3f, 0f);
             warningBarOffset = new Vector3(0f, 1.6f, 0f);
         }

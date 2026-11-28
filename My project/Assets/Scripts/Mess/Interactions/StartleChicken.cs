@@ -5,6 +5,7 @@ namespace Amusnet.Mess
 {
     public sealed class StartleChicken : Interactable
     {
+        private static readonly int SpeedParam = Animator.StringToHash("Speed");
         [SerializeField] private KnockOverPot pot;
         [SerializeField] private Transform body;
         [SerializeField] private Transform leftWing;
@@ -42,7 +43,7 @@ namespace Amusnet.Mess
             transform.rotation = Quaternion.RotateTowards(transform.rotation, idleHeading, 350f * Time.deltaTime);
             if (animator)
             {
-                animator.SetFloat("Speed", walking ? 1f : 0f, .1f, Time.deltaTime);
+                animator.SetFloat(SpeedParam, walking ? 1f : 0f, .1f, Time.deltaTime);
                 return;
             }
             float stride = walking ? Mathf.Sin(phase * 22f) : 0f;
@@ -81,7 +82,7 @@ namespace Amusnet.Mess
 
             transform.rotation = running;
             body.localRotation = Quaternion.identity;
-            if (animator) animator.SetFloat("Speed", 2f);
+            if (animator) animator.SetFloat(SpeedParam, 2f);
             float impactDistance = Mathf.Max(0f, toPot.magnitude - 0.40f);
             float runDistance = impactDistance + 1.9f;
             float duration = Mathf.Max(0.6f, runDistance / 3.2f);
@@ -111,7 +112,7 @@ namespace Amusnet.Mess
             body.localPosition = bodyRest;
             leftLeg.localRotation = rightLeg.localRotation = Quaternion.identity;
             leftWing.localRotation = rightWing.localRotation = Quaternion.identity;
-            if (animator) animator.SetFloat("Speed", 0f);
+            if (animator) animator.SetFloat(SpeedParam, 0f);
             if (!reachedPot && pot) pot.TryInteract(manager, this);
         }
 

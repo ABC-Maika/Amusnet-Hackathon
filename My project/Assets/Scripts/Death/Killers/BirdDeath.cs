@@ -17,11 +17,14 @@ namespace Butterfly.Death
             displayName = "Bird";
             warningTime = 3f;
             telegraphTime = 1.5f;
-            legacyMultiplier = 1.2f;
             launchVelocity = new Vector3(0f, 2.5f, 0f);
         }
 
         void Awake() { if (displayName == "Unknown") Reset(); }
+
+        public override bool EatsVictim => true;
+        public override Transform Eater => PredatorBird.Instance ? PredatorBird.Instance.transform : transform;
+        public override PoopKind Poop => PoopKind.Bird;
 
         public override void OnDeathBegin(GameObject butterfly)
         {

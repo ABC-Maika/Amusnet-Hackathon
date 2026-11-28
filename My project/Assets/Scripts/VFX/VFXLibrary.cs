@@ -12,6 +12,4 @@ public class VFXLibrary : ScriptableObject
     public GameObject angerIcon;
     [Tooltip("One-shot burst of wing scales when the butterfly dies.")]
     public GameObject deathBurst;
-    [Tooltip("Looping ghostly glow and trail parented under the spirit successor.")]
-    public GameObject spiritTrail;
 }

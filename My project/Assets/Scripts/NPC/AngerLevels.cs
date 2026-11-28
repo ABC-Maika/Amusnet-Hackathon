@@ -75,7 +75,19 @@ namespace Butterfly.NPC
 
         public float Mess { get; private set; }
         public AngerTier Tier { get; private set; } = AngerTier.Calm;
-        public TierSettings Current => tiers.Find(t => t.tier == Tier) ?? tiers[0];
+        TierSettings current;
+        /// <summary>Settings of the current tier (cached: villagers read it several times a frame).</summary>
+        public TierSettings Current => current ??= FindTier(Tier);
+
+        TierSettings FindTier(AngerTier tier)
+        {
+            foreach (var t in tiers) if (t.tier == tier) return t;
+            return tiers[0];
+        }
+
+        // Enter Play Mode without a domain reload keeps statics.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() { Instance = null; TierChanged = null; }
         public AngerTools Tools => Current.tools;
         public float SpeedMultiplier => Current.speedMultiplier;
         public float NoticeRadius => Current.noticeRadius;
@@ -136,6 +148,7 @@ namespace Butterfly.NPC
 
             var previous = Tier;
             Tier = target;
+            current = null;
             Debug.Log($"[Anger] {previous} -> {Tier} (mess {Mess:0.00})");
 
             foreach (var r in reactives.ToArray()) r?.OnAngerTierChanged(Tier, previous);
@@ -149,6 +162,7 @@ namespace Butterfly.NPC
             Mess = rawMess = agitation = 0f;
             var previous = Tier;
             Tier = AngerTier.Calm;
+            current = null;
             if (previous == Tier) return;
             foreach (var r in reactives.ToArray()) r?.OnAngerTierChanged(Tier, previous);
             TierChanged?.Invoke(Tier, previous);

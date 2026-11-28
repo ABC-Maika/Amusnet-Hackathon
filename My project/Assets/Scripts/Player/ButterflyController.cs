@@ -16,6 +16,8 @@ public sealed class ButterflyController : MonoBehaviour
     [SerializeField] private Transform visual;
 
     private CharacterController motor;
+    private Terrain groundTerrain;
+    internal Vector3? LastTerrainPosition { get; private set; }
     private Vector3 velocity;
     private float yaw;
     private float pitch;       // visual nose pitch (degrees, positive = nose down)
@@ -124,8 +126,10 @@ public sealed class ButterflyController : MonoBehaviour
     /// <param name="pitchDelta">Degrees to add to the flight pitch this frame (mouse up = positive).</param>
     public void Simulate(Vector2 steer, float vertical, float deltaTime, bool boostHeld = false, float pitchDelta = 0f)
     {
-        if (deltaTime <= 0f)
+        if (deltaTime <= 0f || !motor.enabled)
             return;
+
+        KeepAboveTerrain();
 
         float yawRate = steer.x * settings.yawSpeed;
         yaw += yawRate * deltaTime;
@@ -168,6 +172,7 @@ public sealed class ButterflyController : MonoBehaviour
             IsBoosting = false;
             AnimateBody(0f, false, deltaTime, yawRate, true);
             UpdateWingAnimation(supported, false, deltaTime);
+            KeepAboveTerrain();
             return;
         }
 
@@ -183,6 +188,59 @@ public sealed class ButterflyController : MonoBehaviour
 
         AnimateBody(speed, hovering, deltaTime, yawRate, false);
         UpdateWingAnimation(landed, false, deltaTime);
+        KeepAboveTerrain();
+    }
+
+    private void KeepAboveTerrain()
+    {
+        if (!groundTerrain || !groundTerrain.isActiveAndEnabled)
+            groundTerrain = Terrain.activeTerrain;
+        if (!groundTerrain)
+            return;
+
+        Vector3 position = transform.position;
+        float footOffset = motor.bounds.min.y - position.y;
+        if (TryGetTerrainFloor(groundTerrain, position, out float floor))
+        {
+            if (position.y + footOffset >= floor - .08f)
+            {
+                LastTerrainPosition = position;
+                return;
+            }
+        }
+        else
+        {
+            if (position.y >= groundTerrain.transform.position.y - 1f || !LastTerrainPosition.HasValue)
+                return;
+            position = LastTerrainPosition.Value;
+            if (!TryGetTerrainFloor(groundTerrain, position, out floor))
+                return;
+        }
+
+        position.y = floor - footOffset + .025f;
+        motor.enabled = false;
+        transform.position = position;
+        motor.enabled = true;
+        LastTerrainPosition = position;
+        velocity = Vector3.zero;
+        speed = 0f;
+        IsBoosting = false;
+    }
+
+    internal static bool TryGetTerrainFloor(Terrain terrain, Vector3 position, out float height)
+    {
+        height = 0f;
+        if (!terrain || !terrain.isActiveAndEnabled || !terrain.terrainData)
+            return false;
+
+        Vector3 origin = terrain.transform.position;
+        Vector3 offset = position - origin;
+        Vector3 size = terrain.terrainData.size;
+        if (offset.x < 0f || offset.z < 0f || offset.x >= size.x || offset.z >= size.z)
+            return false;
+
+        height = origin.y + terrain.SampleHeight(position);
+        return true;
     }
 
     // Body motion: nose follows the climb, banks into turns, wings beat faster with speed, flutter bob.

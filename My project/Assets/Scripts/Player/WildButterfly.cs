@@ -46,7 +46,7 @@ public sealed class WildButterfly : MonoBehaviour
         if (partner != null)
         {
             float a = Time.time * 4f;
-            goal = partner.position + new Vector3(Mathf.Cos(a), 0.3f, Mathf.Sin(a)) * 1.1f;
+            goal = partner.position + new Vector3(Mathf.Cos(a), 0.3f, Mathf.Sin(a)) * (1.1f * partner.lossyScale.y);
             speed *= 3f;
         }
         else if (leaving)

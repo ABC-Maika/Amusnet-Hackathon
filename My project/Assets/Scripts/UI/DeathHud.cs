@@ -185,17 +185,17 @@ namespace Butterfly.UI
 
         // ---------- state ----------
         bool dying;
-        float steerElapsed;
-        float steerSeconds = 3f;
         float popupLeft;
         float toastLeft;
         float shownAnger;
         string killerName = "";
+        Amusnet.Mess.MessManager mess;
 
         void OnEnable()
         {
             DeathManager.DeathStarted += OnDeathStarted;
-            DeathManager.LegacyAwarded += OnLegacyAwarded;
+            DeathManager.Pooped += OnPooped;
+            DeathManager.ScoreAwarded += OnScoreAwarded;
             DeathManager.DeathFinished += OnDeathFinished;
             RebelAnimal.Recruited += OnRecruited;
         }
@@ -203,7 +203,8 @@ namespace Butterfly.UI
         void OnDisable()
         {
             DeathManager.DeathStarted -= OnDeathStarted;
-            DeathManager.LegacyAwarded -= OnLegacyAwarded;
+            DeathManager.Pooped -= OnPooped;
+            DeathManager.ScoreAwarded -= OnScoreAwarded;
             DeathManager.DeathFinished -= OnDeathFinished;
             RebelAnimal.Recruited -= OnRecruited;
         }
@@ -211,19 +212,26 @@ namespace Butterfly.UI
         void OnDeathStarted(DeathCause cause)
         {
             dying = true;
-            steerElapsed = 0f;
-            killerName = cause != null ? cause.displayName : "";
-            if (DeathManager.Instance != null) steerSeconds = Mathf.Max(0.5f, DeathManager.Instance.steerDuration);
-            if (deathTitle) deathTitle.text = "MARTYR'S LAST FLUTTER";
-            if (deathSub) deathSub.text = string.IsNullOrEmpty(killerName)
-                ? "Steer your fall into the biggest mess!"
-                : $"Caught by the {killerName}.  Steer your fall into the biggest mess!";
+            killerName = cause != null && !string.IsNullOrEmpty(cause.displayName) ? cause.displayName.ToLowerInvariant() : "predator";
+            bool eaten = cause != null && cause.EatsVictim;
+            if (deathTitle) deathTitle.text = eaten ? "GOBBLED UP!" : "CAUGHT!";
+            if (deathSub) deathSub.text = eaten
+                ? $"The {killerName} ate you.  Now it just has to... digest."
+                : $"The {killerName} got you.";
+            if (steerFillRect && steerFillRect.parent) steerFillRect.parent.gameObject.SetActive(false); // no steering any more
             if (legacyPopupGroup) legacyPopupGroup.alpha = 0f;
         }
 
-        void OnLegacyAwarded(float gained)
+        void OnPooped(DeathCause cause)
         {
-            if (legacyPopupText) legacyPopupText.text = $"+{gained:0}  REBEL LEGACY";
+            if (deathTitle) deathTitle.text = "...AND POOPED OUT";
+            if (deathSub) deathSub.text = $"You're {killerName} poop now.  At least you'll make a mess.";
+        }
+
+        void OnScoreAwarded(int gained)
+        {
+            if (gained <= 0) return;
+            if (legacyPopupText) legacyPopupText.text = $"SPLAT!  +{gained} SCORE";
             popupLeft = 3.5f;
         }
 
@@ -371,9 +379,10 @@ namespace Butterfly.UI
         void UpdateLegacy()
         {
             string amber = Hex(Amber);
-            if (legacyText) legacyText.text = $"{LegacyBank.Total:0}";
+            if (!mess) mess = FindFirstObjectByType<Amusnet.Mess.MessManager>();
+            if (legacyText) legacyText.text = mess ? mess.Score.ToString() : "0";
             int allies = RebelAnimal.Allies.Count;
-            float mult = LegacyBank.AllyMultiplier(RebelAnimal.TotalAllyBonus());
+            float mult = mess ? mess.Multiplier : RebelAnimal.AllyMultiplier();
             if (statsText)
                 statsText.text = $"Allies <color=#{amber}>{allies}</color>   ·   " +
                                  $"Multiplier <color=#{amber}>×{mult:0.00}</color>";
@@ -393,16 +402,6 @@ namespace Butterfly.UI
             float uiDt = Time.unscaledDeltaTime;
             bool showOverlay = dying && !PauseMenu.IsPaused;
             if (deathGroup) deathGroup.alpha = Mathf.MoveTowards(deathGroup.alpha, showOverlay ? 1f : 0f, 5f * uiDt);
-
-            if (dying)
-            {
-                steerElapsed += dt;
-                if (steerFillRect)
-                {
-                    float left = Mathf.Clamp01(1f - steerElapsed / (steerSeconds + 0.15f));
-                    var max = steerFillRect.anchorMax; max.x = left; steerFillRect.anchorMax = max;
-                }
-            }
 
             popupLeft -= dt;
             if (legacyPopupGroup)

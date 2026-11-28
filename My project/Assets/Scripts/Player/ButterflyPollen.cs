@@ -5,7 +5,16 @@ using UnityEngine.InputSystem;
 public sealed class ButterflyPollen : MonoBehaviour
 {
     private ParticleSystem trail;
-    private bool emitting;
+    public bool IsEmitting { get; private set; }
+
+    /// <summary>The player's pollen that is live right now. Map content saved with the map's own preview
+    /// butterfly switches to this one when the game turns that preview rig off.</summary>
+    public static ButterflyPollen Active { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => Active = null;
+
+    private void OnEnable() => Active = this;
 
     private void Awake()
     {
@@ -23,16 +32,17 @@ public sealed class ButterflyPollen : MonoBehaviour
 
     private void OnDisable()
     {
+        if (Active == this) Active = null;
         if (trail != null)
             SetEmitting(false);
     }
 
     private void SetEmitting(bool held)
     {
-        if (emitting == held)
+        if (IsEmitting == held)
             return;
 
-        emitting = held;
+        IsEmitting = held;
         var emission = trail.emission;
         emission.enabled = held;
         if (held)

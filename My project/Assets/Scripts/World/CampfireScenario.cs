@@ -1,32 +1,32 @@
+using System.Collections.Generic;
+using UnityEngine.AI;
 using Amusnet.Mess;
 using Butterfly.Death;
 using Butterfly.UI;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Amusnet.World
 {
     /// <summary>
     /// Night scenario for the "Village Night Campfire" scene (a copy of Village).
     /// A villager tends a campfire on the grassy common, a bucket beside a stool. Fly close to their face
-    /// and they get angry and chase you; once you have lured them away from the fire a scripted gust
-    /// carries glowing embers to the nearest cottage. Two tasks go on the HUD task board:
+    /// and they get angry and chase you; once you have lured them away from the fire a line of flames
+    /// creeps across the ground to the nearest house. Two tasks go on the HUD task board:
     ///   1. "Lure the villager away from the campfire"
-    ///   2. "Embers are blowing toward the cottage": the cottage catches fire. The villager runs for the
+    ///   2. "Fire is spreading to the house": the cottage catches fire. The villager runs for the
     ///      bucket; keep them busy (fly in their face) until it has burned, or they put it out.
-    /// Burning the cottage down awards mess. Everything is built from primitives and particles at Start, and
-    /// the component installs itself into the scene named <see cref="SceneName"/>, so there is nothing to place.
+    /// Scene objects supply the camp, fire emitters, villagers and their door routes.
     /// </summary>
     public sealed class CampfireScenario : MonoBehaviour
     {
         public const string SceneName = "Village Night Campfire";
 
-        enum Phase { Tending, Chasing, Returning, Embers, Burning, Burned }
+        enum Phase { Tending, Startled, Chasing, Returning, Embers, Burning, Burned, Saved }
 
         [Header("Villager")]
         public float faceRadius = 1.8f;
-        [Tooltip("Seconds in the villager's face before they lose their temper.")]
-        public float annoySeconds = 1.5f;
+        [Min(0f)] public float sightDistance = 5f;
+        [Range(0f, 180f)] public float sightAngle = 120f;
         public float walkSpeed = 2.6f;
         public float chaseSpeed = 2.6f;
         public float bucketRunSpeed = 4.2f;
@@ -38,16 +38,14 @@ namespace Amusnet.World
         public float attendRadius = 6f;
         [Tooltip("Seconds the fire must be unattended before the gust arrives.")]
         public float gustDelay = 6f;
-        public float emberFlightSeconds = 5f;
-        public float gustSeconds = 2.2f;
+        [UnityEngine.Serialization.FormerlySerializedAs("emberFlightSeconds")]
+        public float groundSpreadSeconds = 6f;
 
         [Header("Cottage fire")]
         public float burnSeconds = 20f;
         public int burnMessPoints = 40;
-        [Tooltip("Total bucket-throwing seconds (summed over all villagers at the cottage) needed to put the fire out.")]
+        [Tooltip("Water needed to put the fire out. The campfire tender contributes more than each helper.")]
         public float douseSeconds = 10f;
-        [Tooltip("Villagers who run in with buckets once the cottage is burning.")]
-        public int helperCount = 3;
         [Tooltip("How long flying in the villager's face stalls their run to the cottage.")]
         public float stallSeconds = 1.2f;
         [Tooltip("Pause before the villager can be stalled again.")]
@@ -56,184 +54,110 @@ namespace Amusnet.World
         const string LureTask = "campfire_lure";
         const string EmberTask = "campfire_embers";
 
+        [System.Serializable]
         sealed class Helper
         {
-            public Transform t, bucket;
+            public Transform t;
+            public Transform interior;
+            public Transform exit;
+            public Transform bucketStation;
             public Animator anim;
-            public int animState;
-            public Vector3 spot;
-            public float nextThrow;
-            public bool arrived;
+            public float responseDelay;
+            [System.NonSerialized] public int animState;
+            [System.NonSerialized] public float nextThrow;
+            [System.NonSerialized] public bool exited, arrived;
         }
 
-        readonly System.Collections.Generic.List<Helper> helpers = new System.Collections.Generic.List<Helper>();
-        ParticleSystem waterFx;
-        float campGrow;
-        Phase phase;
-        Transform butterfly, villager, head, bucket, stool, flames, bubbleT;
-        Animator animator;
-        TextMesh bubble;
-        Light fireLight, houseLight;
-        ParticleSystem flameFx, emberFx, houseFlameFx, houseSmokeFx;
-        Transform house;
-        Vector3 firePos, houseTop, stoolSpot, bucketSpot, houseDoor;
-        float headHeight = 1.7f;
-        float nextStallAt, emberDebt, annoy, unattended, phaseTime, douse, burned, bubbleUntil, stunUntil, gustLeft;
-        bool carryingBucket, lureDone;
-        int animState;
-        Material glowMat;
+        [Header("Scene objects")]
+        [SerializeField] Transform house;
+        [SerializeField] Transform camp, villager, head, bucket, flames, spit;
+        [SerializeField] Transform home, bucketHome, houseApproach, ignition, roof;
+        [SerializeField] Transform groundFire, houseFlameRoot;
+        [SerializeField] TextMesh bubble;
+        [SerializeField] Animator animator;
+        [SerializeField] CampfireChair chair;
+        [SerializeField] Light fireLight, houseLight;
+        [SerializeField] ParticleSystem houseSmokeFx, waterFx, tearFx;
+        [Header("Bucket crew")]
+        [SerializeField] List<Helper> helpers = new();
+        [Header("Effects and navigation")]
+        [SerializeField] List<FlameSpot> groundFlames = new(), houseFlames = new();
+        [SerializeField] List<BuildingFootprint> navigation = new();
+
+        [System.Serializable]
+        sealed class FlameSpot
+        {
+            public Transform transform;
+            [Range(0f, 1f)] public float ignitionProgress;
+            public ParticleSystem[] layers;
+            public float[] rates;
+            [System.NonSerialized] public Vector3 restScale;
+        }
+
+        [System.Serializable]
+        sealed class BuildingFootprint
+        {
+            public Transform building;
+            public NavMeshObstacle obstacle;
+        }
+
+        readonly List<(Transform building, Bounds footprint)> buildings = new();
+        Renderer[] houseRenderers;
+        MaterialPropertyBlock charBlock;
+        Transform butterfly;
         Camera cam;
+        Phase phase;
+        float campGrow;
+        float nextStallAt, unattended, phaseTime, douse, burned, bubbleUntil, stunUntil;
+        bool carryingBucket, lureDone, grieving;
+        int animState;
+        Vector3 campFlameScale;
+        Quaternion campFlameRotation;
+        float campLightRange, campLightIntensity, houseLightIntensity, smokeRate;
+        const float NpcPad = 0.9f;
         string fallbackLine = "";
 
-        // ---------- install into the copied scene ----------
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void Hook()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            TryInstall(SceneManager.GetActiveScene());
-            for (int i = 0; i < SceneManager.sceneCount; i++) TryInstall(SceneManager.GetSceneAt(i));
-        }
-
-        static void OnSceneLoaded(Scene s, LoadSceneMode mode) => TryInstall(s);
-
-        static void TryInstall(Scene s)
-        {
-            if (!s.isLoaded || s.name != SceneName || FindFirstObjectByType<CampfireScenario>() != null) return;
-            var go = new GameObject("Night Campfire");
-            SceneManager.MoveGameObjectToScene(go, s);
-            go.AddComponent<CampfireScenario>();
-        }
-
-        // ---------- setup ----------
+        Vector3 firePos => camp.position;
+        Vector3 ignitionPoint => ignition.position;
+        Vector3 houseTop => roof.position;
+        Vector3 houseDoor => houseApproach.position;
+        Vector3 bucketSpot => bucketHome.position;
 
         void Start()
         {
             cam = Camera.main;
-            FreezeAtNight();
-
-            var common = GameObject.Find("Grassy common");
-            Vector3 centre = common ? common.transform.position : (ButterflyLocator.Find() ? ButterflyLocator.Find().position : Vector3.zero);
-            firePos = Snap(centre);
-            transform.position = firePos;
-
-            house = FindNearestCottage(firePos);
-            if (house)
+            foreach (var entry in navigation)
             {
-                var b = BoundsOf(house);
-                houseTop = new Vector3(b.center.x, b.max.y, b.center.z);
-                Vector3 toFire = firePos - b.center; toFire.y = 0f;
-                houseDoor = Snap(b.center + toFire.normalized * (Mathf.Max(b.extents.x, b.extents.z) + 1.2f));
+                if (!entry.building || !entry.obstacle || !entry.obstacle.isActiveAndEnabled) continue;
+                var obstacle = entry.obstacle;
+                var centre = obstacle.transform.TransformPoint(obstacle.center);
+                var size = Vector3.Scale(obstacle.size, obstacle.transform.lossyScale);
+                buildings.Add((entry.building, new Bounds(new Vector3(centre.x, 0f, centre.z),
+                    new Vector3(size.x + 2f * NpcPad, 1f, size.z + 2f * NpcPad))));
             }
-            else
+            houseRenderers = house.GetComponentsInChildren<Renderer>();
+            charBlock = new MaterialPropertyBlock();
+            campFlameScale = flames.localScale;
+            campFlameRotation = flames.rotation;
+            campLightRange = fireLight.range;
+            campLightIntensity = fireLight.intensity;
+            houseLightIntensity = houseLight.intensity;
+            smokeRate = houseSmokeFx.emission.rateOverTime.constant;
+            foreach (var slot in groundFlames) slot.restScale = slot.transform.localScale;
+            foreach (var slot in houseFlames) slot.restScale = slot.transform.localScale;
+            groundFire.gameObject.SetActive(false);
+            houseFlameRoot.gameObject.SetActive(false);
+            houseSmokeFx.transform.parent.gameObject.SetActive(false);
+            houseLight.gameObject.SetActive(false);
+            tearFx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            foreach (var helper in helpers)
             {
-                // No cottage found: fall back to a spot 25 m away so the scenario still runs.
-                houseTop = firePos + new Vector3(25f, 4f, 0f);
-                houseDoor = Snap(firePos + new Vector3(23f, 0f, 0f));
+                helper.t.position = helper.interior.position;
+                HelperPlay(helper, "Watch");
             }
-
-            glowMat = new Material(Shader.Find("Sprites/Default")) { mainTexture = SoftTexture() };
-            BuildCamp();
-            BuildVillager();
             phase = Phase.Tending;
+            chair.Sit();
             PostLureTask();
-        }
-
-        // The weather cycles through day and rain: hold it at a dry night for this scenario.
-        void FreezeAtNight()
-        {
-            var weather = FindFirstObjectByType<WeatherSystem>();
-            if (!weather) return;
-            weather.startDay = 0.75f;
-            weather.dayLength = 1000000f;
-            weather.weatherPeriod = 1000000f;
-        }
-
-        void BuildCamp()
-        {
-            var camp = new GameObject("Campfire").transform;
-            camp.SetParent(transform, false);
-            camp.position = firePos;
-
-            Color stone = new Color(0.42f, 0.42f, 0.44f), wood = new Color(0.32f, 0.2f, 0.1f);
-            for (int i = 0; i < 9; i++)
-            {
-                float a = i / 9f * Mathf.PI * 2f;
-                var s = Part(camp, PrimitiveType.Sphere, firePos + new Vector3(Mathf.Cos(a), 0.12f, Mathf.Sin(a)) * 0.75f, new Vector3(0.38f, 0.26f, 0.34f), stone);
-                s.rotation = Quaternion.Euler(0f, a * 57f, 0f);
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                var log = Part(camp, PrimitiveType.Cylinder, firePos + Vector3.up * 0.18f, new Vector3(0.14f, 0.55f, 0.14f), wood);
-                log.rotation = Quaternion.Euler(78f, i * 120f, 0f);
-            }
-
-            flames = new GameObject("Flames").transform;
-            flames.SetParent(camp, false);
-            flames.position = firePos + Vector3.up * 0.25f;
-            flameFx = MakeFlames(flames, 1f);
-            emberFx = MakeEmbers(flames);
-
-            fireLight = new GameObject("Fire Light").AddComponent<Light>();
-            fireLight.transform.SetParent(camp, false);
-            fireLight.transform.position = firePos + Vector3.up * 1.1f;
-            fireLight.type = LightType.Point;
-            fireLight.color = new Color(1f, 0.58f, 0.22f);
-            fireLight.range = 16f;
-            fireLight.intensity = 6f;
-
-            // Stool and bucket beside it.
-            stoolSpot = Snap(firePos + new Vector3(2.1f, 0f, -0.4f));
-            stool = Part(camp, PrimitiveType.Cylinder, stoolSpot + Vector3.up * 0.28f, new Vector3(0.55f, 0.28f, 0.55f), new Color(0.5f, 0.33f, 0.18f));
-            bucketSpot = Snap(stoolSpot + new Vector3(0.85f, 0f, 0.35f));
-            bucket = Part(camp, PrimitiveType.Cylinder, bucketSpot + Vector3.up * 0.22f, new Vector3(0.36f, 0.22f, 0.36f), new Color(0.45f, 0.5f, 0.58f));
-        }
-
-        GameObject MakeModel(string modelName)
-        {
-            GameObject model = null;
-#if UNITY_EDITOR
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Characters/Prefabs/Red Shirt.prefab");
-            if (prefab) model = Instantiate(prefab);
-#endif
-            if (model == null)
-            {
-                model = new GameObject("Villager");
-                Part(model.transform, PrimitiveType.Capsule, Vector3.up * 0.85f, new Vector3(0.6f, 0.85f, 0.6f), new Color(0.75f, 0.2f, 0.2f)).localPosition = Vector3.up * 0.85f;
-                Part(model.transform, PrimitiveType.Sphere, Vector3.up * 1.75f, Vector3.one * 0.42f, new Color(0.95f, 0.78f, 0.62f)).localPosition = Vector3.up * 1.75f;
-            }
-            model.name = modelName;
-            model.transform.SetParent(transform, false);
-            foreach (var c in model.GetComponentsInChildren<Collider>()) c.enabled = false;
-            return model;
-        }
-
-        void BuildVillager()
-        {
-            GameObject model = MakeModel("Campfire Villager");
-            model.transform.SetParent(transform, false);
-            foreach (var c in model.GetComponentsInChildren<Collider>()) c.enabled = false;
-            villager = model.transform;
-            villager.position = stoolSpot + new Vector3(-0.2f, 0f, -0.9f);
-            animator = model.GetComponentInChildren<Animator>();
-
-            var b = BoundsOf(villager);
-            if (b.size.y > 0.5f) headHeight = b.max.y - villager.position.y;
-            head = new GameObject("Head").transform;
-            head.SetParent(villager, false);
-            head.position = villager.position + Vector3.up * headHeight * 0.95f;
-
-            bubbleT = new GameObject("Bubble").transform;
-            bubbleT.SetParent(villager, false);
-            bubbleT.position = villager.position + Vector3.up * (headHeight + 0.45f);
-            bubble = bubbleT.gameObject.AddComponent<TextMesh>();
-            bubble.anchor = TextAnchor.MiddleCenter;
-            bubble.characterSize = 0.12f;
-            bubble.fontSize = 48;
-            bubble.text = "";
-            FaceTarget(villager, firePos);
-            Play("Watch");
         }
 
         // ---------- loop ----------
@@ -247,37 +171,56 @@ namespace Amusnet.World
             float dt = Time.deltaTime;
             phaseTime += dt;
             GrowCampfire(dt);
+            if (spit) spit.Rotate(Vector3.right, 38f * dt, Space.Self);
             FlickerFire();
             UpdateBubble();
 
             bool annoyed = butterfly && Vector3.Distance(butterfly.position, head.position) < faceRadius;
-            if (phase == Phase.Burning) { TickHouseFire(dt); TickHelpers(dt); } // the fire burns whatever the villager is doing
+            if (phase == Phase.Burning) TickHouseFire(dt);
+            if (phase == Phase.Burning) TickHelpers(dt);
             if (Time.time < stunUntil) { Play("Watch"); return; }
 
             switch (phase)
             {
-                case Phase.Tending: UpdateTending(dt, annoyed); break;
+                case Phase.Tending: UpdateTending(); break;
+                case Phase.Startled: UpdateStartled(); break;
                 case Phase.Chasing: UpdateChasing(dt); break;
                 case Phase.Returning: UpdateReturning(dt); break;
                 case Phase.Embers: UpdateEmbers(dt); break;
                 case Phase.Burning: UpdateBurning(dt, annoyed); break;
+                case Phase.Burned: UpdateGrieving(dt); break;
             }
-            Ground(villager);
+            if (phase != Phase.Tending && phase != Phase.Startled) Ground(villager);
+            if (phase == Phase.Burned && grieving) villager.position += Vector3.up * (Mathf.Abs(Mathf.Sin(Time.time * 13f)) * 0.05f); // sobbing
         }
 
-        void UpdateTending(float dt, bool annoyed)
+        // In a tree or flower hiding spot (ShelterState on the butterfly).
+        bool ButterflyHidden()
         {
-            FaceTarget(villager, firePos);
-            Play("Watch");
-            annoy = annoyed ? annoy + dt : Mathf.Max(0f, annoy - dt * 0.6f);
-            if (annoyed && annoy > annoySeconds * 0.4f && Time.time > bubbleUntil) Say("Hmm?", Color.white, 1f);
-            if (annoy >= annoySeconds) BeginChase();
+            var shelter = butterfly.GetComponentInParent<Amusnet.World.ShelterState>();
+            return shelter != null && shelter.IsHidden;
         }
 
-        void BeginChase()
+        void UpdateTending()
         {
-            phase = Phase.Chasing; phaseTime = 0f; annoy = 0f; unattended = 0f;
+            if (!butterfly || ButterflyHidden()) return;
+            Vector3 offset = butterfly.position - head.position;
+            float distance = offset.magnitude;
+            if (distance > sightDistance || Vector3.Angle(villager.forward, offset) > sightAngle * 0.5f) return;
+            if (distance > 0.01f && Physics.Raycast(head.position, offset / distance, out var hit, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(butterfly)) return;
+
+            phase = Phase.Startled;
+            phaseTime = 0f;
+            chair.BeginJump(OutsideBuildings(chair.LandingPoint));
             Say("Shoo, bug!", new Color(1f, 0.35f, 0.25f), 2f);
+        }
+
+        void UpdateStartled()
+        {
+            if (!chair.Jump(phaseTime)) return;
+            phase = Phase.Chasing; phaseTime = 0f; unattended = 0f;
+            animState = 0;
         }
 
         void UpdateChasing(float dt)
@@ -287,7 +230,7 @@ namespace Amusnet.World
             float far = Vector3.Distance(villager.position, butterfly.position);
             MoveToward(flat, chaseSpeed, dt);
 
-            bool hidden = HidingZone.IsHidden(butterfly.position);
+            bool hidden = ButterflyHidden();
             if (far > loseInterestDistance || hidden || phaseTime > 25f)
             {
                 Say(hidden ? "Where did it go?" : "Bah!", Color.white, 1.6f);
@@ -298,9 +241,13 @@ namespace Amusnet.World
 
         void UpdateReturning(float dt)
         {
-            Vector3 home = stoolSpot + new Vector3(-0.2f, 0f, -0.9f);
-            bool arrived = MoveToward(home, walkSpeed, dt);
-            if (arrived) { phase = Phase.Tending; phaseTime = 0f; unattended = 0f; return; }
+            bool arrived = MoveToward(home.position, walkSpeed, dt);
+            if (arrived)
+            {
+                chair.Sit();
+                phase = Phase.Tending; phaseTime = 0f; unattended = 0f;
+                return;
+            }
             TrackUnattended(dt);
         }
 
@@ -318,111 +265,55 @@ namespace Amusnet.World
             if (unattended >= gustDelay) BeginGust();
         }
 
-        // The unattended campfire swells until it throws embers at the nearest cottage.
+        // The unattended campfire swells until it throws embers at the nearest village house.
         void GrowCampfire(float dt)
         {
-            float target = phase >= Phase.Embers ? 1f : Mathf.Clamp01(unattended / Mathf.Max(0.1f, gustDelay));
+            float target = phase == Phase.Embers || phase == Phase.Burning ? 0.65f : Mathf.Clamp01(unattended / Mathf.Max(0.1f, gustDelay));
             campGrow = Mathf.MoveTowards(campGrow, target, dt * (target > campGrow ? 0.5f : 0.3f));
-            if (flames && phase != Phase.Embers) flames.localScale = Vector3.one * (1f + 1.6f * campGrow);
-            else if (flames) flames.localScale = Vector3.one * 2.6f;
-            if (fireLight) fireLight.range = 16f + 10f * campGrow;
+            if (flames) flames.localScale = campFlameScale * (1f + 0.50f * campGrow);
+            if (fireLight) fireLight.range = campLightRange + 10f * campGrow;
         }
 
         void BeginGust()
         {
-            phase = Phase.Embers; phaseTime = 0f; gustLeft = gustSeconds;
-            string name = house ? PrettyName(house.name) : "cottage";
+            phase = Phase.Embers;
+            phaseTime = 0f;
+            groundFire.gameObject.SetActive(true);
             Say("The fire!", new Color(1f, 0.8f, 0.3f), 2f);
-            Post(EmberTask, $"The campfire is spreading to the {name}!", 0, Mathf.CeilToInt(burnSeconds));
+            Post(EmberTask, $"Fire is spreading to the {PrettyName(house.name)}!", 0, Mathf.CeilToInt(burnSeconds));
         }
 
         void UpdateEmbers(float dt)
         {
-            // Villager keeps chasing the butterfly (or stands by the fire) while the gust blows.
-            Vector3 dir = houseTop - firePos; dir.y = 0f;
-            flames.rotation = Quaternion.Slerp(flames.rotation, Quaternion.FromToRotation(Vector3.up, Vector3.up + dir.normalized * 0.9f), 4f * dt);
-
-            if (gustLeft > 0f)
+            Vector3 direction = Vector3.ProjectOnPlane(ignitionPoint - firePos, Vector3.up).normalized;
+            flames.rotation = Quaternion.Slerp(flames.rotation,
+                Quaternion.FromToRotation(Vector3.up, Vector3.up + direction * 0.45f), dt * 3f);
+            UpdateGroundFire(phaseTime);
+            if (phaseTime >= Mathf.Max(0.1f, groundSpreadSeconds))
             {
-                gustLeft -= dt;
-                EmitEmbers(dt);
-            }
-
-            if (phaseTime >= gustSeconds + emberFlightSeconds)
-            {
-                flames.rotation = Quaternion.identity;
+                flames.rotation = campFlameRotation;
                 StartHouseFire();
             }
         }
 
-        void EmitEmbers(float dt)
+        void UpdateGroundFire(float elapsed)
         {
-            float T = emberFlightSeconds;
-            float g = 9.81f * 0.15f;
-            Vector3 flat = houseTop - (firePos + Vector3.up * 0.5f);
-            float dy = flat.y; flat.y = 0f;
-            emberDebt += 28f * dt;
-            int count = Mathf.FloorToInt(emberDebt);
-            emberDebt -= count;
-            for (int i = 0; i < count; i++)
+            foreach (var flame in groundFlames)
             {
-                float t = T * Random.Range(0.92f, 1.08f);
-                Vector3 v = flat / t;
-                v += new Vector3(Random.Range(-0.8f, 0.8f), 0f, Random.Range(-0.8f, 0.8f));
-                v.y = (dy + 0.5f * g * t * t) / t;
-                var p = new ParticleSystem.EmitParams
-                {
-                    position = firePos + Vector3.up * 0.6f + Random.insideUnitSphere * 0.25f,
-                    velocity = v,
-                    startLifetime = t,
-                    startSize = Random.Range(0.1f, 0.22f),
-                    startColor = Color.Lerp(new Color(1f, 0.8f, 0.3f), new Color(1f, 0.35f, 0.1f), Random.value)
-                };
-                emberFx.Emit(p, 1);
+                float age = elapsed - flame.ignitionProgress * Mathf.Max(0.1f, groundSpreadSeconds);
+                float strength = Mathf.SmoothStep(0f, 1f, age / 0.55f) *
+                    (1f - Mathf.SmoothStep(0f, 1f, (age - 1.6f) / 2.8f));
+                SetFlameStrength(flame, strength, strength);
             }
         }
 
         void StartHouseFire()
         {
             phase = Phase.Burning; phaseTime = 0f; burned = 0f; douse = 0f; carryingBucket = false; nextStallAt = 0f;
-            houseFlameFx = MakeFlames(new GameObject("Cottage Flames").transform, 1.6f);
-            houseFlameFx.transform.position = houseTop + Vector3.down * 0.6f;
-            houseSmokeFx = MakeSmoke(new GameObject("Cottage Smoke").transform);
-            houseSmokeFx.transform.position = houseTop;
-            houseLight = new GameObject("Cottage Fire Light").AddComponent<Light>();
-            houseLight.transform.position = houseTop + Vector3.up * 1.2f;
-            houseLight.type = LightType.Point;
-            houseLight.color = new Color(1f, 0.5f, 0.2f);
-            houseLight.range = 20f;
-            houseLight.intensity = 8f;
-            Say("My cottage!", new Color(1f, 0.35f, 0.25f), 2.5f);
-            Post(EmberTask, "The cottage is on fire! Villagers are bringing water", 0, Mathf.CeilToInt(burnSeconds));
-            SpawnHelpers();
-        }
-
-        // ---------- bucket brigade ----------
-
-        void SpawnHelpers()
-        {
-            if (waterFx == null) waterFx = MakeWater();
-            Vector3 away = firePos - houseDoor; away.y = 0f;
-            away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.right;
-            Vector3 side = Vector3.Cross(Vector3.up, away);
-            Vector3 toHouse = houseTop - houseDoor; toHouse.y = 0f;
-            for (int i = 0; i < helperCount; i++)
-            {
-                float k = i - (helperCount - 1) * 0.5f;
-                var h = new Helper();
-                var model = MakeModel("Bucket Villager " + (i + 1));
-                h.t = model.transform;
-                h.anim = model.GetComponentInChildren<Animator>();
-                h.t.position = Snap(firePos + away * (6f + i * 1.2f) + side * (k * 2.5f));
-                h.spot = Snap(houseDoor + side * (k * 1.8f) + away * Random.Range(0f, 1.5f));
-                h.nextThrow = Random.Range(0.2f, 0.9f);
-                h.bucket = Part(h.t, PrimitiveType.Cylinder, h.t.position + Vector3.up, new Vector3(0.3f, 0.18f, 0.3f), new Color(0.45f, 0.5f, 0.58f));
-                HelperPlay(h, "Walk");
-                helpers.Add(h);
-            }
+            houseFlameRoot.gameObject.SetActive(true);
+            houseSmokeFx.transform.parent.gameObject.SetActive(true);
+            houseLight.gameObject.SetActive(true);
+            Post(EmberTask, "The house is on fire! Villagers are bringing water", 0, Mathf.CeilToInt(burnSeconds));
         }
 
         void TickHelpers(float dt)
@@ -430,15 +321,25 @@ namespace Amusnet.World
             float rate = 0f;
             foreach (var h in helpers)
             {
-                if (!h.t) continue;
-                if (!h.arrived)
+                if (!h.t || phaseTime < h.responseDelay) continue;
+                if (!h.exited)
                 {
-                    Vector3 to = h.spot - h.t.position; to.y = 0f;
+                    // Only the short, authored doorway segment bypasses house avoidance.
+                    Vector3 threshold = h.exit.position;
+                    threshold.y = h.t.position.y;
+                    FaceTarget(h.t, threshold);
+                    h.t.position = Vector3.MoveTowards(h.t.position, threshold, walkSpeed * dt);
+                    h.exited = Vector3.Distance(h.t.position, threshold) < 0.05f;
+                    HelperPlay(h, "Walk");
+                }
+                else if (!h.arrived)
+                {
+                    Vector3 target = OutsideBuildings(h.bucketStation.position);
+                    Vector3 to = Vector3.ProjectOnPlane(target - h.t.position, Vector3.up);
                     if (to.magnitude < 0.3f) h.arrived = true;
                     else
                     {
-                        FaceTarget(h.t, h.spot);
-                        h.t.position += to.normalized * (bucketRunSpeed * dt);
+                        StepAroundBuildings(h.t, target, bucketRunSpeed * dt);
                         HelperPlay(h, "Walk");
                     }
                 }
@@ -446,14 +347,12 @@ namespace Amusnet.World
                 {
                     FaceTarget(h.t, houseTop);
                     HelperPlay(h, "Watch");
-                    rate += 1f;
+                    rate += 0.20f;
                     h.nextThrow -= dt;
                     if (h.nextThrow <= 0f) { Throw(h); h.nextThrow = Random.Range(0.9f, 1.4f); }
                 }
                 Ground(h.t);
-                if (h.bucket) h.bucket.position = h.t.position + h.t.forward * 0.4f + h.t.right * 0.25f + Vector3.up * 0.9f;
             }
-            if (carryingBucket && Vector3.Distance(villager.position, houseDoor) < 0.6f) rate += 1f;
             douse += rate * dt;
             if (douse >= douseSeconds) PutOut();
         }
@@ -484,35 +383,15 @@ namespace Amusnet.World
         {
             if (!h.anim || h.anim.runtimeAnimatorController == null) return;
             int state = Animator.StringToHash("Base Layer." + pose);
+            h.anim.speed = pose == "Walk" || h.anim.HasState(0, state) ? 1f : 0f;
             if (state == h.animState || !h.anim.HasState(0, state)) return;
             h.anim.CrossFadeInFixedTime(state, 0.15f);
             h.animState = state;
         }
 
-        void ClearHelpers()
+        void StopBucketCrew()
         {
-            foreach (var h in helpers) if (h.t) Destroy(h.t.gameObject, 2.5f);
-            helpers.Clear();
-        }
-
-        ParticleSystem MakeWater()
-        {
-            var go = new GameObject("Water");
-            go.transform.SetParent(transform, false);
-            var ps = go.AddComponent<ParticleSystem>();
-            var main = ps.main;
-            main.loop = true;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startSpeed = 0f;
-            main.startLifetime = 0.8f;
-            main.startSize = 0.15f;
-            main.gravityModifier = 1f;
-            main.maxParticles = 800;
-            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
-            var emission = ps.emission; emission.rateOverTime = 0f;
-            var shape = ps.shape; shape.enabled = false;
-            ps.GetComponent<ParticleSystemRenderer>().sharedMaterial = glowMat;
-            return ps;
+            foreach (var h in helpers) HelperPlay(h, "Watch");
         }
 
         void UpdateBurning(float dt, bool annoyed)
@@ -548,67 +427,272 @@ namespace Amusnet.World
             if (carryingBucket) bucket.position = villager.position + villager.right * 0.35f + Vector3.up * 0.8f;
         }
 
+        static void SetFlameStrength(FlameSpot flame, float growth, float emissionScale)
+        {
+            flame.transform.localScale = flame.restScale * Mathf.Lerp(0.35f, 1.36f, growth);
+            for (int i = 0; i < flame.layers.Length; i++)
+            {
+                var emission = flame.layers[i].emission;
+                emission.rateOverTime = flame.rates[i] * emissionScale;
+            }
+        }
+
         // The cottage fire: grows and counts down on its own clock, independent of the villager and the butterfly.
         void TickHouseFire(float dt)
         {
             burned += dt;
             var intensity = Mathf.Clamp01(burned / burnSeconds);
-            houseFlameFx.transform.localScale = Vector3.one * ((1f + intensity) * (1f - 0.7f * Mathf.Clamp01(douse / douseSeconds)));
-            houseLight.intensity = 8f + 6f * intensity + Random.Range(-1.2f, 1.2f);
+            float dousedFactor = 1f - 0.7f * Mathf.Clamp01(douse / douseSeconds);
+            foreach (var flame in houseFlames)
+            {
+                float growth = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((burned - burnSeconds * flame.ignitionProgress) / Mathf.Max(0.1f, burnSeconds * 0.13f)));
+                float flicker = Mathf.Lerp(0.75f, 1.25f, Mathf.PerlinNoise(flame.ignitionProgress * 20f, burned * 5f));
+                SetFlameStrength(flame, growth, growth * flicker * dousedFactor);
+            }
+            if (groundFire.gameObject.activeSelf)
+            {
+                UpdateGroundFire(Mathf.Max(0.1f, groundSpreadSeconds) + burned);
+                if (burned >= 8f) ClearGroundFire();
+            }
+            houseSmokeFx.transform.position = Vector3.Lerp(ignitionPoint, houseTop, intensity);
+            var smoke = houseSmokeFx.emission;
+            smoke.rateOverTime = smokeRate * Mathf.Lerp(0.4f, 4.2f, intensity) * dousedFactor;
+            houseLight.transform.position = Vector3.Lerp(ignitionPoint, houseTop, intensity) + Vector3.up;
+            houseLight.intensity = (houseLightIntensity + 17f * intensity) * dousedFactor * Mathf.Lerp(0.8f, 1.2f, Mathf.PerlinNoise(burned * 9f, 1f));
+            TintHouse(Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.30f, 0.95f, intensity)));
             TaskPanel.Progress(EmberTask, Mathf.FloorToInt(burned));
             fallbackLine = $"The cottage is burning {Mathf.FloorToInt(burned)}/{Mathf.CeilToInt(burnSeconds)}";
             if (burned >= burnSeconds) Burn();
         }
 
+        void ClearGroundFire()
+        {
+            groundFire.gameObject.SetActive(false);
+        }
+
         void PutOut()
         {
+            ClearGroundFire();
             Say("Phew!", Color.white, 2f);
-            TaskPanel.Remove(EmberTask);
-            ClearHelpers();
-            Destroy(houseFlameFx.gameObject); Destroy(houseSmokeFx.gameObject); Destroy(houseLight.gameObject);
+            TaskPanel.Complete(EmberTask);
+            fallbackLine = "";
+            StopBucketCrew();
+            houseFlameRoot.gameObject.SetActive(false);
+            houseSmokeFx.transform.parent.gameObject.SetActive(false);
+            houseLight.gameObject.SetActive(false);
             if (carryingBucket) { bucket.position = bucketSpot + Vector3.up * 0.22f; carryingBucket = false; }
-            // The scenario resets: back to the fire, ready for another gust.
-            lureDone = false; unattended = 0f;
-            phase = Phase.Returning; phaseTime = 0f;
-            PostLureTask();
+            // The scenario ends here.
+            phase = Phase.Saved; phaseTime = 0f;
+        }
+
+        // After the mission: the villager walks to his cottage, stands beside it and cries.
+
+        void UpdateGrieving(float dt)
+        {
+            Vector3 side = Vector3.Cross(Vector3.up, (houseDoor - houseTop).normalized);
+            Vector3 spot = Snap(houseDoor + side * 1.4f);
+            if (!MoveToward(spot, 2.4f, dt)) return;
+            FaceTarget(villager, houseTop);
+            Play("Watch");
+            if (grieving) { if (Time.time > bubbleUntil - 1f) Say("MY HOUSE", new Color(1f, 0.85f, 0.4f), 5f); return; }
+            grieving = true;
+            Say("MY HOUSE", new Color(1f, 0.85f, 0.4f), 5f);
+            tearFx.Play();
+        }
+
+        void LateUpdate()
+        {
+            if (!enabled || buildings.Count == 0) return;
+            if (Time.time >= nextAgentScan)
+            {
+                nextAgentScan = Time.time + 2f;
+                agents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
+            }
+            foreach (var agent in agents)
+            {
+                if (!agent || agent.gameObject.scene != gameObject.scene || !agent.isActiveAndEnabled || !agent.isOnNavMesh) continue;
+                Vector3 position = agent.transform.position;
+                Vector3 outside = OutsideBuildings(position);
+                if ((outside - position).sqrMagnitude < 0.0001f) continue;
+                if (NavMesh.SamplePosition(outside, out var hit, 0.5f, agent.areaMask) &&
+                    (OutsideBuildings(hit.position) - hit.position).sqrMagnitude < 0.0001f)
+                    agent.Warp(hit.position);
+            }
+        }
+
+        float nextAgentScan;
+        NavMeshAgent[] agents = System.Array.Empty<NavMeshAgent>();
+
+        Vector3 OutsideBuildings(Vector3 point)
+        {
+            foreach (var entry in buildings)
+            {
+                Bounds box = entry.footprint;
+                if (point.x <= box.min.x || point.x >= box.max.x || point.z <= box.min.z || point.z >= box.max.z) continue;
+                float x = point.x < box.center.x ? box.min.x - 0.08f : box.max.x + 0.08f;
+                float z = point.z < box.center.z ? box.min.z - 0.08f : box.max.z + 0.08f;
+                if (Mathf.Abs(point.x - x) < Mathf.Abs(point.z - z)) point.x = x;
+                else point.z = z;
+            }
+            return point;
+        }
+
+        bool SegmentClear(Vector3 from, Vector3 to)
+        {
+            Vector3 move = to - from;
+            move.y = 0f;
+            if (move.sqrMagnitude < 0.000001f) return true;
+            from.y = 0f;
+            var ray = new Ray(from, move);
+            foreach (var entry in buildings)
+                if (entry.footprint.IntersectRay(ray, out float distance) && distance < move.magnitude)
+                    return false;
+            return true;
+        }
+
+        readonly Dictionary<Transform, (Vector3 target, Vector3 waypoint)> detours = new();
+
+        void StepAroundBuildings(Transform actor, Vector3 target, float step)
+        {
+            Vector3 from = OutsideBuildings(actor.position);
+            target = OutsideBuildings(target);
+            target.y = from.y;
+            Vector3 waypoint = target;
+            if (SegmentClear(from, target))
+                detours.Remove(actor);
+            else if (detours.TryGetValue(actor, out var detour) &&
+                Vector3.ProjectOnPlane(detour.target - target, Vector3.up).sqrMagnitude < 2.25f &&
+                Vector3.ProjectOnPlane(detour.waypoint - from, Vector3.up).sqrMagnitude > 0.0025f &&
+                SegmentClear(from, detour.waypoint))
+                waypoint = detour.waypoint;
+            else
+            {
+                waypoint = FindDetour(from, target);
+                detours[actor] = (target, waypoint);
+            }
+            waypoint.y = from.y;
+            FaceTarget(actor, waypoint);
+            actor.position = Vector3.MoveTowards(from, waypoint, step);
+        }
+
+        Vector3 FindDetour(Vector3 from, Vector3 target)
+        {
+            // Find the shortest clear route through the corners of the building footprints.
+            var points = new List<Vector3> { from, target };
+            foreach (var entry in buildings)
+            {
+                var box = entry.footprint;
+                for (int i = 0; i < 4; i++)
+                {
+                    var corner = new Vector3(i < 2 ? box.min.x - 0.12f : box.max.x + 0.12f, from.y,
+                        i % 2 == 0 ? box.min.z - 0.12f : box.max.z + 0.12f);
+                    if ((OutsideBuildings(corner) - corner).sqrMagnitude < 0.0001f)
+                        points.Add(corner);
+                }
+            }
+
+            var distance = new float[points.Count];
+            var previous = new int[points.Count];
+            var visited = new bool[points.Count];
+            System.Array.Fill(distance, float.PositiveInfinity);
+            distance[0] = 0f;
+            for (int step = 0; step < points.Count; step++)
+            {
+                int current = -1;
+                float best = float.PositiveInfinity;
+                for (int i = 0; i < points.Count; i++)
+                {
+                    if (visited[i] || distance[i] >= best) continue;
+                    current = i;
+                    best = distance[i];
+                }
+                if (current < 0) break;
+                if (current == 1)
+                {
+                    while (previous[current] != 0) current = previous[current];
+                    return points[current];
+                }
+                visited[current] = true;
+                for (int i = 1; i < points.Count; i++)
+                {
+                    if (visited[i]) continue;
+                    float score = best + Vector3.Distance(points[current], points[i]);
+                    if (score >= distance[i] || !SegmentClear(points[current], points[i])) continue;
+                    distance[i] = score;
+                    previous[i] = current;
+                }
+            }
+            return from;
         }
 
         void Burn()
         {
+            ClearGroundFire();
             phase = Phase.Burned;
             Say("Noooo!", new Color(1f, 0.35f, 0.25f), 4f);
             TaskPanel.Complete(EmberTask);
             fallbackLine = "";
             var mess = FindFirstObjectByType<MessManager>();
             if (mess) mess.AddMess(burnMessPoints);
-            if (house)
-                foreach (var r in house.GetComponentsInChildren<Renderer>())
-                {
-                    var block = new MaterialPropertyBlock();
-                    r.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", new Color(0.12f, 0.1f, 0.09f));
-                    block.SetColor("_Color", new Color(0.12f, 0.1f, 0.09f));
-                    r.SetPropertyBlock(block);
-                }
+            TintHouse(1f);
             carryingBucket = false;
-            StartCoroutine(StareAtRuins());
+            StopBucketCrew();
+            StartCoroutine(FinishBurn());
         }
 
-        System.Collections.IEnumerator StareAtRuins()
+        void TintHouse(float amount)
         {
-            // Villager stands and stares at the ruined cottage.
-            float t = 0f;
-            while (t < 5f) { t += Time.deltaTime; FaceTarget(villager, houseTop); yield return null; }
+            foreach (var renderer in houseRenderers)
+            {
+                var material = renderer.sharedMaterial;
+                if (!material) continue;
+                string color = material.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
+                if (!material.HasProperty(color)) continue;
+                renderer.GetPropertyBlock(charBlock);
+                charBlock.SetColor(color, Color.Lerp(material.GetColor(color), new Color(0.11f, 0.08f, 0.06f), amount));
+                renderer.SetPropertyBlock(charBlock);
+            }
+        }
+
+        System.Collections.IEnumerator FinishBurn()
+        {
+            yield return new WaitForSeconds(1.1f);
+            if (house)
+            {
+                buildings.RemoveAll(entry => entry.building == house);
+                foreach (var entry in navigation)
+                    if (entry.building == house && entry.obstacle) entry.obstacle.gameObject.SetActive(false);
+                house.gameObject.SetActive(false);
+            }
+
+            foreach (var flame in houseFlames)
+                foreach (var layer in flame.layers)
+                    layer.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+            houseSmokeFx.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+            StartCoroutine(HideAfter(houseFlameRoot.gameObject, 4f));
+            StartCoroutine(HideAfter(houseSmokeFx.transform.parent.gameObject, 7f));
+            for (float elapsed = 0f; elapsed < 2f; elapsed += Time.deltaTime)
+            {
+                if (houseLight) houseLight.intensity *= Mathf.Exp(-2.5f * Time.deltaTime);
+                yield return null;
+            }
+            houseLight.gameObject.SetActive(false);
+        }
+
+        static System.Collections.IEnumerator HideAfter(GameObject effect, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            effect.SetActive(false);
         }
 
         // ---------- villager helpers ----------
 
         bool MoveToward(Vector3 target, float speed, float dt)
         {
+            target = OutsideBuildings(target);
             Vector3 to = target - villager.position; to.y = 0f;
             if (to.magnitude < 0.25f) { Play("Watch"); return true; }
-            FaceTarget(villager, target);
-            villager.position += to.normalized * (speed * dt);
+            StepAroundBuildings(villager, target, speed * dt);
             Play("Walk");
             return false;
         }
@@ -623,6 +707,7 @@ namespace Amusnet.World
         {
             if (!animator || animator.runtimeAnimatorController == null) return;
             int state = Animator.StringToHash("Base Layer." + pose);
+            animator.speed = pose == "Walk" || animator.HasState(0, state) ? 1f : 0f;
             if (state == animState || !animator.HasState(0, state)) return;
             animator.CrossFadeInFixedTime(state, 0.15f);
             animState = state;
@@ -639,12 +724,12 @@ namespace Amusnet.World
         {
             if (!bubble) return;
             if (Time.time > bubbleUntil) bubble.text = "";
-            if (cam) bubbleT.rotation = cam.transform.rotation;
+            if (cam) bubble.transform.rotation = cam.transform.rotation;
         }
 
         void FlickerFire()
         {
-            if (fireLight) fireLight.intensity = 6f + 6f * campGrow + Mathf.PerlinNoise(Time.time * 9f, 0f) * 3f - 1.5f;
+            if (fireLight) fireLight.intensity = campLightIntensity + 6f * campGrow + Mathf.PerlinNoise(Time.time * 9f, 0f) * 3f - 1.5f;
         }
 
         // ---------- task board ----------
@@ -666,30 +751,6 @@ namespace Amusnet.World
 
         // ---------- world helpers ----------
 
-        static Transform FindNearestCottage(Vector3 from)
-        {
-            Transform best = null; float bestD = float.MaxValue;
-            foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
-            {
-                if (!t.name.Contains("Cottage") || t.name == "Cottages") continue;
-                if (t.parent && t.parent.name.Contains("Cottage") && t.parent.name != "Cottages") continue; // top-most only
-                var b = BoundsOf(t);
-                if (b.size.sqrMagnitude < 1f) continue;
-                float d = (b.center - from).sqrMagnitude;
-                if (d < bestD) { bestD = d; best = t; }
-            }
-            return best;
-        }
-
-        static Bounds BoundsOf(Transform t)
-        {
-            var rs = t.GetComponentsInChildren<Renderer>();
-            if (rs.Length == 0) return new Bounds(t.position, Vector3.zero);
-            var b = rs[0].bounds;
-            foreach (var r in rs) b.Encapsulate(r.bounds);
-            return b;
-        }
-
         static Vector3 Snap(Vector3 p)
         {
             var t = Terrain.activeTerrain;
@@ -702,129 +763,5 @@ namespace Amusnet.World
 
         static string PrettyName(string n) => n.Replace("(Clone)", "").Trim().ToLowerInvariant();
 
-        // ---------- placeholder art ----------
-
-        static Transform Part(Transform parent, PrimitiveType type, Vector3 worldPos, Vector3 scale, Color color)
-        {
-            var go = GameObject.CreatePrimitive(type);
-            Destroy(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.position = worldPos;
-            go.transform.localScale = scale;
-            var r = go.GetComponent<Renderer>();
-            r.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard")) { color = color };
-            r.sharedMaterial.SetColor("_BaseColor", color);
-            return go.transform;
-        }
-
-        ParticleSystem MakeFlames(Transform at, float scale)
-        {
-            at.SetParent(transform, true);
-            var ps = at.gameObject.AddComponent<ParticleSystem>();
-            var main = ps.main;
-            main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.95f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * scale, 1.5f * scale);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.35f * scale, 0.7f * scale);
-            main.gravityModifier = -0.2f;
-            main.maxParticles = 200;
-            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
-            var emission = ps.emission; emission.rateOverTime = 60f * scale;
-            var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 12f; shape.radius = 0.28f * scale;
-            shape.rotation = new Vector3(-90f, 0f, 0f);
-            var color = ps.colorOverLifetime; color.enabled = true;
-            var g = new Gradient();
-            g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.9f, 0.4f), 0f), new GradientColorKey(new Color(1f, 0.4f, 0.1f), 0.5f), new GradientColorKey(new Color(0.3f, 0.08f, 0.05f), 1f) },
-                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.9f, 0.15f), new GradientAlphaKey(0f, 1f) });
-            color.color = g;
-            var size = ps.sizeOverLifetime; size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(0.3f, 1f), new Keyframe(1f, 0f)));
-            ps.GetComponent<ParticleSystemRenderer>().sharedMaterial = glowMat;
-            return ps;
-        }
-
-        // World-space sparks that only appear on the gust (and the odd ambient one).
-        ParticleSystem MakeEmbers(Transform at)
-        {
-            var go = new GameObject("Embers");
-            go.transform.SetParent(at, false);
-            var ps = go.AddComponent<ParticleSystem>();
-            var main = ps.main;
-            main.loop = true;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = 2f;
-            main.startSpeed = 0f;
-            main.startSize = 0.12f;
-            main.gravityModifier = 0.15f;
-            main.maxParticles = 600;
-            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
-            var emission = ps.emission; emission.rateOverTime = 0f;
-            var shape = ps.shape; shape.enabled = false;
-            var color = ps.colorOverLifetime; color.enabled = true;
-            var g = new Gradient();
-            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(1f, 0.45f, 0.1f), 1f) },
-                      new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.8f), new GradientAlphaKey(0f, 1f) });
-            color.color = g;
-            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = glowMat;
-            // A few drifting sparks around the fire in normal play.
-            var sparks = ps.emission; sparks.rateOverTime = 0f;
-            StartCoroutine(AmbientSparks(ps));
-            return ps;
-        }
-
-        System.Collections.IEnumerator AmbientSparks(ParticleSystem ps)
-        {
-            while (true)
-            {
-                yield return new WaitForSeconds(Random.Range(0.25f, 0.7f));
-                if (phase == Phase.Embers) continue;
-                ps.Emit(new ParticleSystem.EmitParams
-                {
-                    position = firePos + Vector3.up * 0.6f + Random.insideUnitSphere * 0.2f,
-                    velocity = new Vector3(Random.Range(-0.4f, 0.4f), Random.Range(1f, 2f), Random.Range(-0.4f, 0.4f)),
-                    startLifetime = Random.Range(1f, 2f),
-                    startSize = Random.Range(0.05f, 0.1f),
-                    startColor = new Color(1f, 0.7f, 0.25f)
-                }, 1);
-            }
-        }
-
-        ParticleSystem MakeSmoke(Transform at)
-        {
-            at.SetParent(transform, true);
-            var ps = at.gameObject.AddComponent<ParticleSystem>();
-            var main = ps.main;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 2f);
-            main.startSize = new ParticleSystem.MinMaxCurve(1.2f, 2.4f);
-            main.startColor = new Color(0.15f, 0.15f, 0.17f, 0.5f);
-            main.gravityModifier = -0.05f;
-            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
-            var emission = ps.emission; emission.rateOverTime = 14f;
-            var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 20f; shape.radius = 0.8f;
-            shape.rotation = new Vector3(-90f, 0f, 0f);
-            var color = ps.colorOverLifetime; color.enabled = true;
-            var g = new Gradient();
-            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.6f, 0.2f), new GradientAlphaKey(0f, 1f) });
-            color.color = g;
-            ps.GetComponent<ParticleSystemRenderer>().sharedMaterial = glowMat;
-            return ps;
-        }
-
-        static Texture2D SoftTexture()
-        {
-            const int n = 32;
-            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(n / 2f, n / 2f)) / (n / 2f);
-                    float a = Mathf.Clamp01(1f - d);
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
-                }
-            tex.Apply();
-            return tex;
-        }
     }
 }
