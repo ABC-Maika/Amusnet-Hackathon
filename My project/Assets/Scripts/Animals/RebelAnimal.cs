@@ -66,6 +66,9 @@ namespace Butterfly.Animals
             return sum;
         }
 
+        /// <summary>Score multiplier from recruited allies: 1 + each ally's bonus, capped at x3. No allies = x1.</summary>
+        public static float AllyMultiplier() => Mathf.Min(1f + Mathf.Max(0f, TotalAllyBonus()), 3f);
+
         public bool IsAlly { get; private set; }
 
         Transform player;
@@ -169,7 +172,8 @@ namespace Butterfly.Animals
 
         void OnGUI()
         {
-            if (IsAlly || (GameFlow.Instance != null && !GameFlow.Instance.IsRunning) || !PlayerNear()) return;
+            if (IsAlly || (GameFlow.Instance != null && !GameFlow.Instance.IsRunning)
+                || (DeathManager.Instance != null && DeathManager.Instance.IsDying) || !PlayerNear()) return;
             var cam = Camera.main;
             if (cam == null) return;
             Vector3 sp = cam.WorldToScreenPoint(transform.position + Vector3.up * 1.5f);

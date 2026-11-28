@@ -34,8 +34,44 @@ namespace Butterfly.Death
             telegraphTime = 1.5f;
             warningBarOffset = new Vector3(0f, 1.0f, 0f);
             cooldown = 3f;
-            legacyMultiplier = 1f;
             launchVelocity = new Vector3(0f, 1.5f, 0f);
+        }
+
+        public override bool EatsVictim => true;
+        public override PoopKind Poop => PoopKind.Frog;
+
+        // Just past its rump, on the ground. Measured from the frog's current pose: the skinned bounds would
+        // include the stretched tongue and put the poop metres away.
+        public override Vector3 PoopPoint(Transform eater)
+        {
+            Vector3 back = -Vector3.ProjectOnPlane(eater.forward, Vector3.up).normalized;
+            float rump = 0.5f;
+            var skin = eater.GetComponentInChildren<SkinnedMeshRenderer>();
+            if (skin)
+            {
+                var baked = new Mesh();
+                skin.BakeMesh(baked, true);
+                var toWorld = skin.transform.localToWorldMatrix;
+                foreach (var v in baked.vertices)
+                    rump = Mathf.Max(rump, Vector3.Dot(toWorld.MultiplyPoint3x4(v) - eater.position, back));
+                Destroy(baked);
+            }
+            return eater.position + back * (rump + 0.12f) + Vector3.up * 0.08f;
+        }
+
+        public override void OnPooped(Transform eater) => StartCoroutine(Squat());
+
+        // Squash down and spring back as it pushes the poop out.
+        System.Collections.IEnumerator Squat()
+        {
+            Vector3 rest = transform.localScale;
+            for (float t = 0f; t < 0.45f; t += Time.deltaTime)
+            {
+                float k = Mathf.Sin(t / 0.45f * Mathf.PI);
+                transform.localScale = new Vector3(rest.x * (1f + 0.12f * k), rest.y * (1f - 0.18f * k), rest.z * (1f + 0.12f * k));
+                yield return null;
+            }
+            transform.localScale = rest;
         }
 
         public override void OnDeathBegin(GameObject butterfly)

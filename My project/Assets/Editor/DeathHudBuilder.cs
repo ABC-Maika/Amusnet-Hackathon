@@ -196,7 +196,7 @@ public static class DeathHudBuilder
         Place(emblem, TL, TL, new Vector2(14, -10), new Vector2(50, 44));
         Img(emblem, ButterflyS, DeathHud.Gold).preserveAspect = true;
 
-        Label("Caption", p, "REBEL LEGACY", 14, FontStyle.Normal, DeathHud.Muted, TextAnchor.MiddleLeft, TL, TL, new Vector2(76, -10), new Vector2(210, 18));
+        Label("Caption", p, "SCORE", 14, FontStyle.Normal, DeathHud.Muted, TextAnchor.MiddleLeft, TL, TL, new Vector2(76, -10), new Vector2(210, 18));
         hud.legacyText = Label("Total", p, "0", 30, FontStyle.Bold, DeathHud.Amber, TextAnchor.MiddleLeft, TL, TL, new Vector2(74, -26), new Vector2(210, 34));
 
         hud.statsText = Label("Stats", p, "", 13, FontStyle.Normal, DeathHud.Cream, TextAnchor.MiddleCenter, TL, TL, new Vector2(10, -64), new Vector2(280, 20));
@@ -458,7 +458,7 @@ public static class DeathHudBuilder
         Place(emblem, TC, TC, new Vector2(0, -112), new Vector2(90, 80));
         Img(emblem, ButterflyS, DeathHud.Gold).preserveAspect = true;
 
-        hud.deathTitle = Label("Title", d, "MARTYR'S LAST FLUTTER", 64, FontStyle.Normal, DeathHud.Amber, TextAnchor.MiddleCenter, TC, TC, new Vector2(0, -196), new Vector2(1400, 80));
+        hud.deathTitle = Label("Title", d, "GOBBLED UP!", 64, FontStyle.Normal, DeathHud.Amber, TextAnchor.MiddleCenter, TC, TC, new Vector2(0, -196), new Vector2(1400, 80));
         Soft(hud.deathTitle, 4);
         hud.deathSub = Label("Sub", d, "", 26, FontStyle.Italic, DeathHud.Cream, TextAnchor.MiddleCenter, TC, TC, new Vector2(0, -272), new Vector2(1400, 36));
         Soft(hud.deathSub, 2);
@@ -470,14 +470,13 @@ public static class DeathHudBuilder
         fi.type = Image.Type.Sliced;
         fi.pixelsPerUnitMultiplier = 4f;
         hud.steerFillRect = fill;
-        Label("SteerHint", d, "W  A  S  D   steer the fall", 18, FontStyle.Normal, DeathHud.Muted, TextAnchor.MiddleCenter, TC, TC, new Vector2(0, -352), new Vector2(540, 26));
 
         var pop = Child("LegacyPopup", root);
         Place(pop, MC, MC, new Vector2(0, -40), new Vector2(1200, 140));
         hud.legacyPopupGroup = pop.gameObject.AddComponent<CanvasGroup>();
         hud.legacyPopupGroup.alpha = 0f;
         hud.legacyPopupGroup.blocksRaycasts = false;
-        hud.legacyPopupText = Label("Text", pop, "+0  REBEL LEGACY", 80, FontStyle.Bold, DeathHud.Amber, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, stretch: true);
+        hud.legacyPopupText = Label("Text", pop, "SPLAT!  +0 SCORE", 80, FontStyle.Bold, DeathHud.Amber, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, stretch: true);
         Soft(hud.legacyPopupText, 5);
     }
 
@@ -528,7 +527,6 @@ public static class DeathHudBuilder
         Column(ctl, "REBELLION", new Vector2(245, -132), new[]
         {
             ("Hold E", "Recruit a nearby animal"),
-            ("W A S D", "Steer the martyr's fall"),
             ("Hold H", "Hide  (test)"),
             ("K", "Die  (test)"),
             ("[   ]", "Village anger  (test)"),

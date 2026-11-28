@@ -84,6 +84,14 @@ public class GameHUD : MonoBehaviour
         return boostTexts[seconds] ??= $"Speed boost {seconds}s";
     }
 
+    /// <summary>Sets the game-over screen's title and line (e.g. who ate the butterfly).</summary>
+    public void SetLoseText(string title, string line)
+    {
+        var root = GetComponent<UIDocument>().rootVisualElement;
+        if (root.Q<Label>("loseTitle") is { } t) t.text = title;
+        if (root.Q<Label>("loseLine") is { } l) l.text = line;
+    }
+
     /// <summary>Shows a short message above the bottom of the screen.</summary>
     public void Toast(string text, float seconds = 3f)
     {

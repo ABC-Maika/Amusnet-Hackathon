@@ -1,5 +1,8 @@
 # Death Design (Sprint 4 [E])
 
+> **Update (Sprint 6):** the martyr fall and Rebel Legacy are gone. Predators (bird, frog, river fish) swallow the butterfly; the camera follows them while they digest (3-5 s), then follows their poop (bird, frog or fish poop), whose splat knocks nearby props over for score. Other killers (spider web, swatter, net, zapper lamp) make the butterfly go limp and fall. Recruited allies now boost the mess score multiplier. See `DeathManager.cs`.
+
+
 Status: **proposed defaults**, all values are tunables on `DeathCause` / `DeathManager` / `LegacyBank` / `AngerLevels`. Playtest in Sprint 5 and adjust in Sprint 6.
 
 ## Core idea: the Martyr's Last Flutter

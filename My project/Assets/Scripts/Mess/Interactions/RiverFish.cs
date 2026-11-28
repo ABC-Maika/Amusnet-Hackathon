@@ -8,6 +8,10 @@ namespace Amusnet.Mess
     // leaps. The jump slows time and asks the player to mash A / D to dodge; fail and the fish catches the butterfly.
     public sealed class RiverFish : DeathCause
     {
+        // A predator: it swallows the butterfly, and the death camera follows it until it poops.
+        public override bool EatsVictim => true;
+        public override PoopKind Poop => PoopKind.Fish;
+
         private enum State { Swim, Stalk, Leap, Fall }
 
         [SerializeField] private Transform model;           // the fish mesh, child of this object

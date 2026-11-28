@@ -394,7 +394,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: MARTYR'S LAST FLUTTER
+  m_Text: GOBBLED UP!
 --- !u!1 &22784611
 GameObject:
   m_ObjectHideFlags: 0
@@ -7824,7 +7824,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: REBEL LEGACY
+  m_Text: SCORE
 --- !u!222 &185682707
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -19512,7 +19512,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &445270346
 RectTransform:
   m_ObjectHideFlags: 0
@@ -53683,7 +53683,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1189166299
 RectTransform:
   m_ObjectHideFlags: 0
@@ -61821,6 +61821,10 @@ MonoBehaviour:
   maximumTurnLean: 7
   boostPullback: 0.345
   motionResponse: 5
+  turnCatchUp: 1.6
+  pitchFollow: 0.4
+  boostFovKick: 14
+  speedFovKick: 5
 --- !u!114 &1445940226
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -66245,7 +66249,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: +0  REBEL LEGACY
+  m_Text: SPLAT!  +0 SCORE
 --- !u!114 &1606651424
 MonoBehaviour:
   m_ObjectHideFlags: 0

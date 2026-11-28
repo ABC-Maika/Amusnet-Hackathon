@@ -172,6 +172,7 @@ public sealed class NatureSpots : MonoBehaviour
     {
         if (toldHide && toldBoost) return;
         if (GameHUD.Instance == null || (GameFlow.Instance != null && !GameFlow.Instance.IsRunning)) return;
+        if (Butterfly.Death.DeathManager.Instance != null && Butterfly.Death.DeathManager.Instance.IsDying) return;
         foreach (var s in spots)
         {
             if (s.marker == null || (s.bounds.center - player.position).sqrMagnitude > 64f) continue;

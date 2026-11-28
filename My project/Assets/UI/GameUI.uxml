@@ -93,8 +93,8 @@
             <b:MenuScrim class="side-scrim" picking-mode="Ignore" />
             <ui:VisualElement class="side-column" picking-mode="Ignore">
                 <ui:Label text="GAME OVER" class="kicker end-kicker reveal" />
-                <ui:Label text="Caught!" class="display-title reveal delay-1" />
-                <ui:Label text="The rebellion will remember your flight." class="lede reveal delay-2" />
+                <ui:Label name="loseTitle" text="Caught!" class="display-title reveal delay-1" />
+                <ui:Label name="loseLine" text="The rebellion will remember your flight." class="lede reveal delay-2" />
                 <ui:VisualElement class="side-buttons" picking-mode="Ignore">
                     <ui:VisualElement class="reveal delay-3" picking-mode="Ignore">
                         <ui:VisualElement class="pbtn-wrap pbtn-wrap--primary">

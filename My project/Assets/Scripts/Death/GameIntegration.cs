@@ -12,7 +12,7 @@ namespace Butterfly.Death
     ///  - DeathManager.DeathFinished -> GameFlow.Lose()
     ///  - PredatorMeter.Percent -> GameHUD.SetPredator
     ///  - MessManager goal reached -> GameFlow.Win(); messes score only while GameFlow.IsRunning
-    ///  - AngerLevels tier multiplier x ButterflySwarm brood multiplier -> MessManager.Multiplier and the HUD
+    ///  - AngerLevels tier x ButterflySwarm brood x RebelAnimal allies -> MessManager.Multiplier and the HUD
     /// Created automatically after every scene load; nothing to place by hand.
     /// </summary>
     public sealed class GameIntegration : MonoBehaviour
@@ -35,12 +35,14 @@ namespace Butterfly.Death
 
         void OnEnable()
         {
+            DeathManager.DeathStarted += OnDeathStarted;
             DeathManager.DeathFinished += OnDeathFinished;
             RebelAnimal.AllyMess += OnAllyMess;
         }
 
         void OnDisable()
         {
+            DeathManager.DeathStarted -= OnDeathStarted;
             DeathManager.DeathFinished -= OnDeathFinished;
             RebelAnimal.AllyMess -= OnAllyMess;
             Unhook();
@@ -63,7 +65,7 @@ namespace Butterfly.Death
             // Each new mess is worth more when the village is angrier and the brood is bigger.
             float anger = AngerLevels.Instance != null ? AngerLevels.Instance.ScoreMultiplier : 1f;
             float brood = ButterflySwarm.Instance != null ? ButterflySwarm.Instance.Multiplier : 1f;
-            mess.Multiplier = anger * brood;
+            mess.Multiplier = anger * brood * RebelAnimal.AllyMultiplier();
             if (GameHUD.Instance != null) GameHUD.Instance.SetMultiplier(mess.Multiplier);
 
             // Messes only score during live play; the run clock starts on Play.
@@ -100,6 +102,15 @@ namespace Butterfly.Death
             if (whole <= 0) return;
             allyRemainder -= whole;
             mess.AddMess(whole);
+        }
+
+        // The game-over screen says what happened.
+        static void OnDeathStarted(DeathCause cause)
+        {
+            if (GameHUD.Instance == null || cause == null) return;
+            string who = string.IsNullOrEmpty(cause.displayName) ? "predator" : cause.displayName.ToLowerInvariant();
+            if (cause.EatsVictim) GameHUD.Instance.SetLoseText("Eaten!", $"Swallowed by a {who}... and pooped out.");
+            else GameHUD.Instance.SetLoseText("Caught!", $"The {who} got you. The rebellion will remember your flight.");
         }
 
         static void OnDeathFinished()

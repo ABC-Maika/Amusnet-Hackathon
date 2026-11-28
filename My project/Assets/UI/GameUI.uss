@@ -182,8 +182,8 @@
 }
 
 /* Kris's death HUD (uGUI) shows the mess (as village anger) and the predator: ours stay hidden. */
-.mess, .predator {
-    display: none;
+.mess, .predator, .mess-mult {
+    display: none; /* the multiplier shows on Kris's score card too */
 }
 
 /* Score multiplier (village anger x brood), under Kris's village anger bar */

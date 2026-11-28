@@ -125,7 +125,7 @@ namespace Butterfly.Death
             transform.rotation = Quaternion.Slerp(transform.rotation, look, 1f - Mathf.Exp(-6f * Time.deltaTime));
         }
 
-        /// <summary>Dive, bite, eat, fly away, then call onEaten (starts the death sequence).</summary>
+        /// <summary>Dive, bite and swallow, then call onEaten (starts the death sequence) and fly away digesting.</summary>
         public void Strike(GameObject victim, System.Action onEaten)
         {
             if (IsStriking) return;
@@ -179,7 +179,18 @@ namespace Butterfly.Death
             }
             if (!eaten) victim.transform.localScale = Vector3.zero;
 
-            // 3. gulp and fly away with the butterfly "inside"
+            // 3. swallowed: the death sequence takes over (its camera follows this bird until it poops)
+            if (rb != null) rb.isKinematic = false;
+            onEaten?.Invoke();
+            bool dying = DeathManager.Instance != null && DeathManager.Instance.IsDying;
+            if (!dying)
+            {
+                // No death system took it: give the butterfly back.
+                victim.transform.localScale = startScale;
+                foreach (var b in frozen) if (b != null) b.enabled = true;
+            }
+
+            // 4. fly away with the butterfly "inside", then go back to circling
             float away = 0f;
             Vector3 dir = (transform.forward + Vector3.up * 0.8f).normalized;
             while (away < flyAwaySeconds)
@@ -190,14 +201,6 @@ namespace Butterfly.Death
                 FaceMovement(step);
                 yield return null;
             }
-
-            // 4. the spirit of the butterfly falls: Martyr's Last Flutter
-            victim.transform.position = transform.position + Vector3.down * 0.5f;
-            victim.transform.localScale = startScale;
-            bool alreadyDying = DeathManager.Instance != null && DeathManager.Instance.IsDying;
-            if (!alreadyDying) foreach (var b in frozen) if (b != null) b.enabled = true;
-            if (rb != null) rb.isKinematic = false;
-            onEaten?.Invoke();
 
             // bird keeps circling afterwards
             IsStriking = false;
