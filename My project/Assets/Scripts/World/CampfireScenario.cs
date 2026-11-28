@@ -28,7 +28,7 @@ namespace Amusnet.World
         [Tooltip("Seconds in the villager's face before they lose their temper.")]
         public float annoySeconds = 1.5f;
         public float walkSpeed = 2.6f;
-        public float chaseSpeed = 3.4f;
+        public float chaseSpeed = 2.6f;
         public float bucketRunSpeed = 4.2f;
         [Tooltip("Stop chasing when the butterfly is further than this.")]
         public float loseInterestDistance = 24f;
@@ -37,19 +37,38 @@ namespace Amusnet.World
         [Tooltip("The fire counts as unattended when the villager is further than this from it.")]
         public float attendRadius = 6f;
         [Tooltip("Seconds the fire must be unattended before the gust arrives.")]
-        public float gustDelay = 3f;
+        public float gustDelay = 6f;
         public float emberFlightSeconds = 5f;
         public float gustSeconds = 2.2f;
 
         [Header("Cottage fire")]
-        public float burnSeconds = 14f;
+        public float burnSeconds = 20f;
         public int burnMessPoints = 40;
-        [Tooltip("Seconds the villager needs at the cottage with the bucket to put the fire out.")]
-        public float douseSeconds = 3f;
+        [Tooltip("Total bucket-throwing seconds (summed over all villagers at the cottage) needed to put the fire out.")]
+        public float douseSeconds = 10f;
+        [Tooltip("Villagers who run in with buckets once the cottage is burning.")]
+        public int helperCount = 3;
+        [Tooltip("How long flying in the villager's face stalls their run to the cottage.")]
+        public float stallSeconds = 1.2f;
+        [Tooltip("Pause before the villager can be stalled again.")]
+        public float stallCooldown = 3f;
 
         const string LureTask = "campfire_lure";
         const string EmberTask = "campfire_embers";
 
+        sealed class Helper
+        {
+            public Transform t, bucket;
+            public Animator anim;
+            public int animState;
+            public Vector3 spot;
+            public float nextThrow;
+            public bool arrived;
+        }
+
+        readonly System.Collections.Generic.List<Helper> helpers = new System.Collections.Generic.List<Helper>();
+        ParticleSystem waterFx;
+        float campGrow;
         Phase phase;
         Transform butterfly, villager, head, bucket, stool, flames, bubbleT;
         Animator animator;
@@ -59,7 +78,7 @@ namespace Amusnet.World
         Transform house;
         Vector3 firePos, houseTop, stoolSpot, bucketSpot, houseDoor;
         float headHeight = 1.7f;
-        float emberDebt, annoy, unattended, phaseTime, douse, burned, bubbleUntil, stunUntil, gustLeft;
+        float nextStallAt, emberDebt, annoy, unattended, phaseTime, douse, burned, bubbleUntil, stunUntil, gustLeft;
         bool carryingBucket, lureDone;
         int animState;
         Material glowMat;
@@ -171,7 +190,7 @@ namespace Amusnet.World
             bucket = Part(camp, PrimitiveType.Cylinder, bucketSpot + Vector3.up * 0.22f, new Vector3(0.36f, 0.22f, 0.36f), new Color(0.45f, 0.5f, 0.58f));
         }
 
-        void BuildVillager()
+        GameObject MakeModel(string modelName)
         {
             GameObject model = null;
 #if UNITY_EDITOR
@@ -184,7 +203,15 @@ namespace Amusnet.World
                 Part(model.transform, PrimitiveType.Capsule, Vector3.up * 0.85f, new Vector3(0.6f, 0.85f, 0.6f), new Color(0.75f, 0.2f, 0.2f)).localPosition = Vector3.up * 0.85f;
                 Part(model.transform, PrimitiveType.Sphere, Vector3.up * 1.75f, Vector3.one * 0.42f, new Color(0.95f, 0.78f, 0.62f)).localPosition = Vector3.up * 1.75f;
             }
-            model.name = "Campfire Villager";
+            model.name = modelName;
+            model.transform.SetParent(transform, false);
+            foreach (var c in model.GetComponentsInChildren<Collider>()) c.enabled = false;
+            return model;
+        }
+
+        void BuildVillager()
+        {
+            GameObject model = MakeModel("Campfire Villager");
             model.transform.SetParent(transform, false);
             foreach (var c in model.GetComponentsInChildren<Collider>()) c.enabled = false;
             villager = model.transform;
@@ -219,10 +246,12 @@ namespace Amusnet.World
 
             float dt = Time.deltaTime;
             phaseTime += dt;
+            GrowCampfire(dt);
             FlickerFire();
             UpdateBubble();
 
             bool annoyed = butterfly && Vector3.Distance(butterfly.position, head.position) < faceRadius;
+            if (phase == Phase.Burning) { TickHouseFire(dt); TickHelpers(dt); } // the fire burns whatever the villager is doing
             if (Time.time < stunUntil) { Play("Watch"); return; }
 
             switch (phase)
@@ -289,12 +318,22 @@ namespace Amusnet.World
             if (unattended >= gustDelay) BeginGust();
         }
 
+        // The unattended campfire swells until it throws embers at the nearest cottage.
+        void GrowCampfire(float dt)
+        {
+            float target = phase >= Phase.Embers ? 1f : Mathf.Clamp01(unattended / Mathf.Max(0.1f, gustDelay));
+            campGrow = Mathf.MoveTowards(campGrow, target, dt * (target > campGrow ? 0.5f : 0.3f));
+            if (flames && phase != Phase.Embers) flames.localScale = Vector3.one * (1f + 1.6f * campGrow);
+            else if (flames) flames.localScale = Vector3.one * 2.6f;
+            if (fireLight) fireLight.range = 16f + 10f * campGrow;
+        }
+
         void BeginGust()
         {
             phase = Phase.Embers; phaseTime = 0f; gustLeft = gustSeconds;
             string name = house ? PrettyName(house.name) : "cottage";
-            Say("A gust!", new Color(1f, 0.8f, 0.3f), 2f);
-            Post(EmberTask, $"Embers are blowing toward the {name}!", 0, Mathf.CeilToInt(burnSeconds));
+            Say("The fire!", new Color(1f, 0.8f, 0.3f), 2f);
+            Post(EmberTask, $"The campfire is spreading to the {name}!", 0, Mathf.CeilToInt(burnSeconds));
         }
 
         void UpdateEmbers(float dt)
@@ -345,7 +384,7 @@ namespace Amusnet.World
 
         void StartHouseFire()
         {
-            phase = Phase.Burning; phaseTime = 0f; burned = 0f; douse = 0f; carryingBucket = false;
+            phase = Phase.Burning; phaseTime = 0f; burned = 0f; douse = 0f; carryingBucket = false; nextStallAt = 0f;
             houseFlameFx = MakeFlames(new GameObject("Cottage Flames").transform, 1.6f);
             houseFlameFx.transform.position = houseTop + Vector3.down * 0.6f;
             houseSmokeFx = MakeSmoke(new GameObject("Cottage Smoke").transform);
@@ -357,15 +396,135 @@ namespace Amusnet.World
             houseLight.range = 20f;
             houseLight.intensity = 8f;
             Say("My cottage!", new Color(1f, 0.35f, 0.25f), 2.5f);
-            Post(EmberTask, "The cottage is on fire! Keep the villager busy", 0, Mathf.CeilToInt(burnSeconds));
+            Post(EmberTask, "The cottage is on fire! Villagers are bringing water", 0, Mathf.CeilToInt(burnSeconds));
+            SpawnHelpers();
+        }
+
+        // ---------- bucket brigade ----------
+
+        void SpawnHelpers()
+        {
+            if (waterFx == null) waterFx = MakeWater();
+            Vector3 away = firePos - houseDoor; away.y = 0f;
+            away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.right;
+            Vector3 side = Vector3.Cross(Vector3.up, away);
+            Vector3 toHouse = houseTop - houseDoor; toHouse.y = 0f;
+            for (int i = 0; i < helperCount; i++)
+            {
+                float k = i - (helperCount - 1) * 0.5f;
+                var h = new Helper();
+                var model = MakeModel("Bucket Villager " + (i + 1));
+                h.t = model.transform;
+                h.anim = model.GetComponentInChildren<Animator>();
+                h.t.position = Snap(firePos + away * (6f + i * 1.2f) + side * (k * 2.5f));
+                h.spot = Snap(houseDoor + side * (k * 1.8f) + away * Random.Range(0f, 1.5f));
+                h.nextThrow = Random.Range(0.2f, 0.9f);
+                h.bucket = Part(h.t, PrimitiveType.Cylinder, h.t.position + Vector3.up, new Vector3(0.3f, 0.18f, 0.3f), new Color(0.45f, 0.5f, 0.58f));
+                HelperPlay(h, "Walk");
+                helpers.Add(h);
+            }
+        }
+
+        void TickHelpers(float dt)
+        {
+            float rate = 0f;
+            foreach (var h in helpers)
+            {
+                if (!h.t) continue;
+                if (!h.arrived)
+                {
+                    Vector3 to = h.spot - h.t.position; to.y = 0f;
+                    if (to.magnitude < 0.3f) h.arrived = true;
+                    else
+                    {
+                        FaceTarget(h.t, h.spot);
+                        h.t.position += to.normalized * (bucketRunSpeed * dt);
+                        HelperPlay(h, "Walk");
+                    }
+                }
+                else
+                {
+                    FaceTarget(h.t, houseTop);
+                    HelperPlay(h, "Watch");
+                    rate += 1f;
+                    h.nextThrow -= dt;
+                    if (h.nextThrow <= 0f) { Throw(h); h.nextThrow = Random.Range(0.9f, 1.4f); }
+                }
+                Ground(h.t);
+                if (h.bucket) h.bucket.position = h.t.position + h.t.forward * 0.4f + h.t.right * 0.25f + Vector3.up * 0.9f;
+            }
+            if (carryingBucket && Vector3.Distance(villager.position, houseDoor) < 0.6f) rate += 1f;
+            douse += rate * dt;
+            if (douse >= douseSeconds) PutOut();
+        }
+
+        void Throw(Helper h)
+        {
+            Vector3 from = h.t.position + Vector3.up * 1.3f + h.t.forward * 0.5f;
+            Vector3 target = houseTop + Vector3.down * 0.8f + Random.insideUnitSphere * 0.8f;
+            const float T = 0.8f, g = 9.81f;
+            Vector3 flat = target - from; float dy = flat.y; flat.y = 0f;
+            for (int i = 0; i < 22; i++)
+            {
+                float t = T * Random.Range(0.92f, 1.08f);
+                Vector3 v = flat / t + new Vector3(Random.Range(-0.4f, 0.4f), 0f, Random.Range(-0.4f, 0.4f));
+                v.y = (dy + 0.5f * g * t * t) / t;
+                waterFx.Emit(new ParticleSystem.EmitParams
+                {
+                    position = from + Random.insideUnitSphere * 0.15f,
+                    velocity = v,
+                    startLifetime = t,
+                    startSize = Random.Range(0.1f, 0.2f),
+                    startColor = new Color(0.55f, 0.75f, 1f)
+                }, 1);
+            }
+        }
+
+        void HelperPlay(Helper h, string pose)
+        {
+            if (!h.anim || h.anim.runtimeAnimatorController == null) return;
+            int state = Animator.StringToHash("Base Layer." + pose);
+            if (state == h.animState || !h.anim.HasState(0, state)) return;
+            h.anim.CrossFadeInFixedTime(state, 0.15f);
+            h.animState = state;
+        }
+
+        void ClearHelpers()
+        {
+            foreach (var h in helpers) if (h.t) Destroy(h.t.gameObject, 2.5f);
+            helpers.Clear();
+        }
+
+        ParticleSystem MakeWater()
+        {
+            var go = new GameObject("Water");
+            go.transform.SetParent(transform, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startSpeed = 0f;
+            main.startLifetime = 0.8f;
+            main.startSize = 0.15f;
+            main.gravityModifier = 1f;
+            main.maxParticles = 800;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            var emission = ps.emission; emission.rateOverTime = 0f;
+            var shape = ps.shape; shape.enabled = false;
+            ps.GetComponent<ParticleSystemRenderer>().sharedMaterial = glowMat;
+            return ps;
         }
 
         void UpdateBurning(float dt, bool annoyed)
         {
-            // Annoying the villager stalls their run to the cottage.
-            if (annoyed && phaseTime > 1.5f)
+            if (phase != Phase.Burning) return;
+
+            // Annoying the villager stalls their run to the cottage, but only once in a while,
+            // so hovering in their face cannot hold them back forever.
+            if (annoyed && phaseTime > 1.5f && Time.time >= nextStallAt)
             {
-                stunUntil = Time.time + 1.2f;
+                stunUntil = Time.time + stallSeconds;
+                nextStallAt = stunUntil + stallCooldown;
                 Say("Get off!", new Color(1f, 0.35f, 0.25f), 1.2f);
                 return;
             }
@@ -387,10 +546,14 @@ namespace Amusnet.World
             else FaceTarget(villager, houseTop);
 
             if (carryingBucket) bucket.position = villager.position + villager.right * 0.35f + Vector3.up * 0.8f;
+        }
 
+        // The cottage fire: grows and counts down on its own clock, independent of the villager and the butterfly.
+        void TickHouseFire(float dt)
+        {
             burned += dt;
             var intensity = Mathf.Clamp01(burned / burnSeconds);
-            houseFlameFx.transform.localScale = Vector3.one * (1f + intensity);
+            houseFlameFx.transform.localScale = Vector3.one * ((1f + intensity) * (1f - 0.7f * Mathf.Clamp01(douse / douseSeconds)));
             houseLight.intensity = 8f + 6f * intensity + Random.Range(-1.2f, 1.2f);
             TaskPanel.Progress(EmberTask, Mathf.FloorToInt(burned));
             fallbackLine = $"The cottage is burning {Mathf.FloorToInt(burned)}/{Mathf.CeilToInt(burnSeconds)}";
@@ -401,6 +564,7 @@ namespace Amusnet.World
         {
             Say("Phew!", Color.white, 2f);
             TaskPanel.Remove(EmberTask);
+            ClearHelpers();
             Destroy(houseFlameFx.gameObject); Destroy(houseSmokeFx.gameObject); Destroy(houseLight.gameObject);
             if (carryingBucket) { bucket.position = bucketSpot + Vector3.up * 0.22f; carryingBucket = false; }
             // The scenario resets: back to the fire, ready for another gust.
@@ -480,7 +644,7 @@ namespace Amusnet.World
 
         void FlickerFire()
         {
-            if (fireLight) fireLight.intensity = 6f + Mathf.PerlinNoise(Time.time * 9f, 0f) * 3f - 1.5f;
+            if (fireLight) fireLight.intensity = 6f + 6f * campGrow + Mathf.PerlinNoise(Time.time * 9f, 0f) * 3f - 1.5f;
         }
 
         // ---------- task board ----------
@@ -564,6 +728,7 @@ namespace Amusnet.World
             main.startSize = new ParticleSystem.MinMaxCurve(0.35f * scale, 0.7f * scale);
             main.gravityModifier = -0.2f;
             main.maxParticles = 200;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var emission = ps.emission; emission.rateOverTime = 60f * scale;
             var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 12f; shape.radius = 0.28f * scale;
             shape.rotation = new Vector3(-90f, 0f, 0f);
@@ -592,6 +757,7 @@ namespace Amusnet.World
             main.startSize = 0.12f;
             main.gravityModifier = 0.15f;
             main.maxParticles = 600;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var emission = ps.emission; emission.rateOverTime = 0f;
             var shape = ps.shape; shape.enabled = false;
             var color = ps.colorOverLifetime; color.enabled = true;
@@ -633,6 +799,7 @@ namespace Amusnet.World
             main.startSize = new ParticleSystem.MinMaxCurve(1.2f, 2.4f);
             main.startColor = new Color(0.15f, 0.15f, 0.17f, 0.5f);
             main.gravityModifier = -0.05f;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             var emission = ps.emission; emission.rateOverTime = 14f;
             var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 20f; shape.radius = 0.8f;
             shape.rotation = new Vector3(-90f, 0f, 0f);
