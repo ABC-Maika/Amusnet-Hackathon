@@ -519,10 +519,10 @@ public static class DeathHudBuilder
 
         Column(ctl, "FLIGHT", new Vector2(-245, -132), new[]
         {
-            ("W", "Climb / take off"),
-            ("S", "Dive"),
+            ("W  S", "Fly forward / back"),
+            ("Space  Ctrl", "Rise / descend"),
             ("A  D", "Turn left / right"),
-            ("Release", "Glide down and land"),
+            ("Shift", "Boost"),
             ("Mouse", "Look around"),
         });
         Column(ctl, "REBELLION", new Vector2(245, -132), new[]

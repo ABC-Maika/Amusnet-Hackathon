@@ -12,10 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 640479214266df942b0b549cf1ac9cdd, type: 3}
   m_Name: Preview Flight Settings
   m_EditorClassIdentifier: Assembly-CSharp::ButterflyFlightSettings
-  yawSpeed: 105
-  pitchSpeed: 95
-  maximumPitch: 50
-  neutralDescentPitch: 12
-  flightSpeed: 3.25
-  boostSpeed: 7
-  acceleration: 16
+  yawSpeed: 170
+  pitchSpeed: 150
+  maximumPitch: 55
+  neutralDescentPitch: 7
+  flightSpeed: 2.1
+  boostSpeed: 4.2
+  acceleration: 12
+  hoverWhenIdle: 1
+  hoverBobHeight: 0.04
+  hoverBobSpeed: 2.4
+  hoverBrake: 4
+  hoverPitch: -38
+  hoverWingSpeed: 0.45
+  climbSpeed: 1.7
+  descendSpeed: 2.2
+  backwardFactor: 0.5
+  groundWalkSpeed: 0.7
+  forwardLean: 8
