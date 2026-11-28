@@ -121,11 +121,6 @@ namespace Amusnet.ChickenEscape
         {
             if (Time.frameCount == hostedStartFrame) return;
             var keys = Keyboard.current;
-            if (keys?.rKey.wasPressedThisFrame == true)
-            {
-                Restart();
-                return;
-            }
             if (keys?.escapeKey.wasPressedThisFrame == true)
             {
                 if (Current is Phase.Won or Phase.Lost)
