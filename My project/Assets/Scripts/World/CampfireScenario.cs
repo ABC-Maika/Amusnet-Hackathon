@@ -205,9 +205,16 @@ namespace Amusnet.World
             if (phase == Phase.Burned && grieving) villager.position += Vector3.up * (Mathf.Abs(Mathf.Sin(Time.time * 13f)) * 0.05f); // sobbing
         }
 
+        // In a tree or flower hiding spot (ShelterState on the butterfly).
+        bool ButterflyHidden()
+        {
+            var shelter = butterfly.GetComponentInParent<Amusnet.World.ShelterState>();
+            return shelter != null && shelter.IsHidden;
+        }
+
         void UpdateTending()
         {
-            if (!butterfly || HidingZone.IsHidden(butterfly.position)) return;
+            if (!butterfly || ButterflyHidden()) return;
             Vector3 offset = butterfly.position - head.position;
             float distance = offset.magnitude;
             if (distance > sightDistance || Vector3.Angle(villager.forward, offset) > sightAngle * 0.5f) return;
@@ -234,7 +241,7 @@ namespace Amusnet.World
             float far = Vector3.Distance(villager.position, butterfly.position);
             MoveToward(flat, chaseSpeed, dt);
 
-            bool hidden = HidingZone.IsHidden(butterfly.position);
+            bool hidden = ButterflyHidden();
             if (far > loseInterestDistance || hidden || phaseTime > 25f)
             {
                 Say(hidden ? "Where did it go?" : "Bah!", Color.white, 1.6f);
