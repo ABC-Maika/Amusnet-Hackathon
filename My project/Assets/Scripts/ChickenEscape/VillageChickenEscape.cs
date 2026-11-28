@@ -20,15 +20,21 @@ namespace Amusnet.ChickenEscape
         ButterflyController player;
         Camera villageCamera;
         AudioListener villageListener;
+        TextMesh entranceLabel;
         bool listenerWasEnabled, cursorWasVisible;
         string activityPrompt = "";
         CursorLockMode cursorLock;
         float timeBeforeEntry, nextEntry;
-        int bestRescue, completedThisVisit;
+        int completedThisVisit;
 
         public bool Active => session != null;
+        public bool Passed { get; private set; }
 
-        void Awake() => preparedRun = yard.GetComponentInChildren<MarketEscapeRun>(true);
+        void Awake()
+        {
+            preparedRun = yard.GetComponentInChildren<MarketEscapeRun>(true);
+            entranceLabel = entrance.GetComponentInChildren<TextMesh>(true);
+        }
 
         void Update()
         {
@@ -48,6 +54,12 @@ namespace Amusnet.ChickenEscape
             Vector3 position = player.transform.position;
             bool nearDog = preparedRun.WithinDogReach(position);
             bool nearEntrance = (position - entrance.position).sqrMagnitude <= EntryRange * EntryRange;
+            if (Passed)
+            {
+                ShowPrompt(nearDog || nearEntrance ? "Chicken Escape  ·  Passed" : "");
+                return;
+            }
+
             ShowPrompt(nearDog ? "E  ·  Untie the dog" : nearEntrance ? "E  ·  Start Chicken Escape" : "");
             if ((nearDog || nearEntrance) && Keyboard.current?.eKey.wasPressedThisFrame == true)
                 Enter(game, nearDog ? position : null);
@@ -92,9 +104,19 @@ namespace Amusnet.ChickenEscape
         {
             if (session != run) return;
             RememberCompletion(run);
+            Passed = completedThisVisit > 0;
             RestoreVillage();
             ReplaceYard();
-            if (completedThisVisit > 0) Reward(completedThisVisit);
+            if (!Passed) return;
+
+            preparedRun.ShowCompletedYard(completedThisVisit);
+            if (entranceLabel)
+            {
+                entranceLabel.text = "PASSED";
+                entranceLabel.color = new Color(.77f, 1f, .82f);
+                entranceLabel.characterSize *= .84f;
+            }
+            Reward(completedThisVisit);
         }
 
         void RememberCompletion(MarketEscapeRun run)
@@ -135,12 +157,11 @@ namespace Amusnet.ChickenEscape
 
         void Reward(int saved)
         {
-            int improvement = Mathf.Max(0, saved - bestRescue);
-            bestRescue = Mathf.Max(saved, bestRescue);
             var mess = player ? player.GetComponent<MessManager>() : null;
-            int points = mess ? mess.Multiplied(improvement * PointsPerHen) : 0;
+            int points = mess ? mess.Multiplied(saved * PointsPerHen) : 0;
             if (points > 0) mess.AddMess(points);
-            GameHUD.Instance?.Toast(points > 0 ? $"{saved} hens freed  ·  +{points} mess" : $"{saved} hens freed");
+            string result = $"Chicken Escape passed  ·  {saved}/{preparedRun.Total} hens freed";
+            GameHUD.Instance?.Toast(points > 0 ? $"{result}  ·  +{points} mess" : result, 4f);
         }
 
         void ShowPrompt(string prompt)

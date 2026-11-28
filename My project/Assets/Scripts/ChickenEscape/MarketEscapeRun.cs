@@ -117,6 +117,14 @@ namespace Amusnet.ChickenEscape
             if (untieOnStart && CanUntieDog) UntieDog();
         }
 
+        internal void ShowCompletedYard(int saved)
+        {
+            for (int i = 0; i < Mathf.Min(saved, flock.Length); i++)
+                flock[i].gameObject.SetActive(false);
+            gate.SetOpen(true);
+            keeper.ShowDefeat(gate.Approach, YardVector(new Vector3(-.42f, 0f, -1f)));
+        }
+
         void Update()
         {
             if (Time.frameCount == hostedStartFrame) return;

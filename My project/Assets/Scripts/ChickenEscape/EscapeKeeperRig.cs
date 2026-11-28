@@ -4,12 +4,13 @@ namespace Amusnet.ChickenEscape
 {
     internal sealed class EscapeKeeperRig
     {
-        readonly Transform root, hips, spine;
+        readonly Transform root, hips, spine, head;
         readonly Limb leftArm, rightArm, leftLeg, rightLeg;
         readonly Transform[] bones;
         readonly Quaternion[] rotations;
         readonly float standingHipHeight;
         Vector3 hipsPosition;
+        Quaternion headRotation;
         bool posed;
 
         public EscapeKeeperRig(Animator animator, Transform keeper)
@@ -20,6 +21,7 @@ namespace Amusnet.ChickenEscape
 
             spine = hips.Find("Spine");
             if (!spine) return;
+            head = spine.Find("Neck/Head") ?? spine.Find("Head");
             float restHeight = keeper.InverseTransformPoint(hips.position).y;
             standingHipHeight = restHeight > .7f ? restHeight : 1.08f;
 
@@ -42,6 +44,7 @@ namespace Amusnet.ChickenEscape
             if (!posed) return;
             hips.localPosition = hipsPosition;
             for (int i = 0; i < bones.Length; i++) bones[i].localRotation = rotations[i];
+            if (head) head.localRotation = headRotation;
             posed = false;
         }
 
@@ -64,10 +67,22 @@ namespace Amusnet.ChickenEscape
             leftArm.Reach(Vector3.Lerp(leftArm.End.position, brace, reach), -root.right - Vector3.up);
         }
 
+        public void Slump(float breathing)
+        {
+            if (bones == null) return;
+            Bend(.36f + breathing * .04f);
+            if (head) head.rotation = Quaternion.AngleAxis(24f + breathing * 5f, root.right) * head.rotation;
+
+            Vector3 reach = root.forward * .18f - Vector3.up * .29f;
+            leftArm.Reach(leftLeg.Upper.position + reach - root.right * .10f, -root.right - Vector3.up);
+            rightArm.Reach(rightLeg.Upper.position + reach + root.right * .10f, root.right - Vector3.up);
+        }
+
         void Bend(float crouch)
         {
             hipsPosition = hips.localPosition;
             for (int i = 0; i < bones.Length; i++) rotations[i] = bones[i].localRotation;
+            if (head) headRotation = head.localRotation;
             posed = true;
 
             // The market idle clips key small pelvis offsets. Anchor a reach to the rig's standing height.

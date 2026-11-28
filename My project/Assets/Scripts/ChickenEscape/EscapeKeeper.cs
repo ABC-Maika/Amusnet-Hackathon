@@ -9,7 +9,7 @@ namespace Amusnet.ChickenEscape
         public enum PatrolState
         {
             Patrolling, Investigating, Distracted, Pursuing, Windup, Lunging, ClosingGate, Recovering,
-            ScoopingHen, CarryingHen, PuttingHenDown, CorneringDog, HoldingDog
+            ScoopingHen, CarryingHen, PuttingHenDown, CorneringDog, HoldingDog, Defeated
         }
 
         public const float SightRange = 7.2f;
@@ -70,6 +70,14 @@ namespace Amusnet.ChickenEscape
         }
 
         public void BindYard(MarketEscapeRun run) => yard = run;
+
+        internal void ShowDefeat(Vector3 position, Vector3 forward)
+        {
+            agent.enabled = false;
+            transform.SetPositionAndRotation(position, Quaternion.LookRotation(forward));
+            ChangeState(PatrolState.Defeated);
+            Animate("Watch");
+        }
 
         public bool HearBark(Vector3 point)
         {
@@ -328,6 +336,10 @@ namespace Amusnet.ChickenEscape
                     break;
                 case PatrolState.HoldingDog when heldDog:
                     rig.HoldCollar(heldDog.Collar, Mathf.Lerp(.82f, 1f, Ease(Progress(DogRescueTime) * 14f)));
+                    break;
+                case PatrolState.Defeated:
+                    rig.Restore();
+                    rig.Slump(.5f + .5f * Mathf.Sin(Time.time * 1.3f));
                     break;
             }
         }
