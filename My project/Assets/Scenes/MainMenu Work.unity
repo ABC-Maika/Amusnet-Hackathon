@@ -8326,11 +8326,12 @@ MonoBehaviour:
   riseWhileFlying: 1.5
   fallWhileHidden: 30
   fallWhileResting: 6
+  onlyHidingSpotsHelp: 1
   flyingSpeed: 0.6
   landOnFlowerAt: 55
   hideAt: 80
   arrivalSeconds: 10
-  holdHToHide: 1
+  holdHToHide: 0
 --- !u!4 &228914929
 Transform:
   m_ObjectHideFlags: 0
@@ -34965,7 +34966,7 @@ MonoBehaviour:
   steerFillRect: {fileID: 787594798}
   legacyPopupGroup: {fileID: 409447353}
   legacyPopupText: {fileID: 1606651423}
-  landOnFlowerMessage: You are tired!  Land on a flower, or the predator will catch you.
+  landOnFlowerMessage: You are tired!  Hide in a flower or a tree, or the predator will catch you.
   hideMessage: HIDE NOW!  The predator is diving for you.
 --- !u!114 &703960901
 MonoBehaviour:

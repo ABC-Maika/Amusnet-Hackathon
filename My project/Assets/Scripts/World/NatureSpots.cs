@@ -4,9 +4,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Turns the map's trees and flowers into two kinds of spot when the map loads:
-///  - Hiding spot (teal drifting motes): fly into the leaves or petals to hide from the predator and killers.
-///  - Speed boost (gold rising sparkles): fly through it for a short speed boost; it recharges afterwards.
+/// Turns the map's trees and flowers into spots when the map loads:
+///  - Hiding spot (pale blue drifting motes): fly into the leaves or petals to hide from the predator and killers.
+///  - Speed boost, trees and flowers (gold rising sparkles): a short speed boost; it recharges afterwards.
 /// Each tree or flower gets a fixed kind from its position, so the same plant always does the same thing.
 /// Markers are pooled and shown only on the spots nearest the player. Also feeds the HUD cover pill.
 /// </summary>
@@ -85,31 +85,27 @@ public sealed class NatureSpots : MonoBehaviour
                     b.SetMinMax(min, max);
                     b.size = Vector3.Scale(b.size, new Vector3(0.85f, 1f, 0.85f));
                 }
-                else
-                {
-                    b.size = Vector3.Max(b.size, new Vector3(1.4f, 1.2f, 1.4f));
-                }
+                // Flowers: their own petals only, not the grass around them.
 
-                var spot = new Spot { kind = KindAt(b.center), bounds = b };
+                var kind = KindAt(b.center);
+                var spot = new Spot { kind = kind, bounds = b };
                 spots.Add(spot);
 
-                var go = new GameObject(spot.kind == Kind.Hide ? "Hiding spot" : "Boost spot") { layer = ignoreRaycast };
+                var go = new GameObject(kind == Kind.Hide ? "Hiding spot" : "Boost spot") { layer = ignoreRaycast };
                 go.transform.SetParent(container, false);
                 go.transform.position = b.center;
                 var box = go.AddComponent<BoxCollider>();
                 box.isTrigger = true;
                 box.size = b.size;
-                if (spot.kind == Kind.Hide) go.AddComponent<HidingSpot>();
+                if (kind == Kind.Hide) go.AddComponent<HidingSpot>();
                 else go.AddComponent<SpeedBoostSpot>().Init(this, spots.Count - 1);
             }
         }
 
-        markers[Kind.Hide] = new List<ParticleSystem>();
-        markers[Kind.Boost] = new List<ParticleSystem>();
-        for (int i = 0; i < markersPerKind; i++)
+        foreach (Kind k in System.Enum.GetValues(typeof(Kind)))
         {
-            markers[Kind.Hide].Add(MakeMarker(Kind.Hide));
-            markers[Kind.Boost].Add(MakeMarker(Kind.Boost));
+            markers[k] = new List<ParticleSystem>();
+            for (int i = 0; i < markersPerKind; i++) markers[k].Add(MakeMarker(k));
         }
     }
 

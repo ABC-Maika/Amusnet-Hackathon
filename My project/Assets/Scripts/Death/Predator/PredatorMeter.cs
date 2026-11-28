@@ -23,6 +23,8 @@ namespace Butterfly.Death
         public float riseWhileFlying = 1.5f;
         public float fallWhileHidden = 30f;
         public float fallWhileResting = 6f;
+        [Tooltip("On: only hiding spots lower the meter. Landing anywhere else (grass, ground) does not help: it keeps rising.")]
+        public bool onlyHidingSpotsHelp = false;
         [Tooltip("Speed above which the butterfly counts as flying.")]
         public float flyingSpeed = 0.6f;
 
@@ -80,7 +82,7 @@ namespace Butterfly.Death
             IsFlying = speed > flyingSpeed;
 
             if (IsHidden) Percent -= fallWhileHidden * dt;
-            else if (IsFlying) Percent += riseWhileFlying * dt;
+            else if (IsFlying || onlyHidingSpotsHelp) Percent += riseWhileFlying * dt;
             else Percent -= fallWhileResting * dt;
             Percent = Mathf.Clamp(Percent, 0f, 100f);
 
