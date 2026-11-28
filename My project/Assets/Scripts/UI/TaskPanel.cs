@@ -157,6 +157,11 @@ namespace Butterfly.UI
 
         void Update()
         {
+            if (GameFlow.Instance != null && GameFlow.Instance.ActivityActive)
+            {
+                if (group) group.alpha = 0f;
+                return;
+            }
             if (PauseMenu.IsPaused) return;
             survived += Time.deltaTime;
 
