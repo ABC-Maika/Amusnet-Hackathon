@@ -20,7 +20,7 @@ public class GameHUD : MonoBehaviour
     GameFlow flow;
     SettingsPanel settings;
     VisualElement hud, pauseScreen, settingsScreen, winScreen, loseScreen, fade, messFill;
-    Label messValue, predatorValue, messMultiplier, coverStatus, toast;
+    Label messValue, predatorValue, messMultiplier, coverStatus, toast, activityPrompt;
     RadialMeter predatorMeter;
     float mess, multiplier = 1f, predator, safeUntil, toastUntil;
     bool wasHidden, chasedWhileHidden;
@@ -92,6 +92,13 @@ public class GameHUD : MonoBehaviour
         toastUntil = Time.unscaledTime + seconds;
     }
 
+    public void SetActivityPrompt(string text)
+    {
+        if (activityPrompt == null) return;
+        activityPrompt.text = text;
+        activityPrompt.EnableInClassList("hud-toast--off", string.IsNullOrEmpty(text));
+    }
+
     /// <param name="percent">Predator percentage, 0..100.</param>
     public void SetPredator(float percent)
     {
@@ -129,6 +136,7 @@ public class GameHUD : MonoBehaviour
         messMultiplier = root.Q<Label>("messMultiplier");
         coverStatus = root.Q<Label>("coverStatus");
         toast = root.Q<Label>("toast");
+        activityPrompt = root.Q<Label>("activityPrompt");
 
         settings = new SettingsPanel(settingsScreen);
         settings.BackClicked += CloseSettings;
@@ -165,10 +173,10 @@ public class GameHUD : MonoBehaviour
     void Update()
     {
         // Hidden on the menu and while the win cinematic plays (WinPending has no event, so check each frame).
-        hud.EnableInClassList("hud--off", flow.Current == GameFlow.State.Menu || flow.WinPending);
+        hud.EnableInClassList("hud--off", flow.Current == GameFlow.State.Menu || flow.WinPending || flow.ActivityActive);
         if (toastUntil > 0f && Time.unscaledTime > toastUntil) { toastUntil = 0f; toast.AddToClassList("hud-toast--off"); }
 
-        if (leaving || Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
+        if (leaving || flow.ActivityActive || Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
         if (settingsScreen.ClassListContains("is-shown")) settings.Back();
         else if (flow.Current is GameFlow.State.Playing or GameFlow.State.Paused) flow.TogglePause();
     }

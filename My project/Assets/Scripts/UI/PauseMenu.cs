@@ -62,6 +62,7 @@ namespace Butterfly.UI
 
         void Update()
         {
+            if (GameFlow.Instance != null && GameFlow.Instance.ActivityActive) return;
             bool esc = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             bool start = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
             bool back = Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;

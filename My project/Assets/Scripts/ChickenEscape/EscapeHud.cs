@@ -102,7 +102,7 @@ namespace Amusnet.ChickenEscape
             Prompt(phase);
             var marker = run.PrimaryMarker();
             guide.text = phase == MarketEscapeRun.Phase.MeetDog ? "Dog’s leash" :
-                run.DogCaptured ? "Dog caught" : run.ActorPosition.z > 2.24f ? "Latch" : "Blue gap";
+                run.DogCaptured ? "Dog caught" : run.InsideLatchSide ? "Latch" : "Blue gap";
             Point(guide, marker, !overlay && marker != Vector3.zero);
             Point(orchard, run.OrchardMarker, inFarm && !overlay);
             Point(lane, run.LaneMarker, inFarm && !overlay);
@@ -117,7 +117,7 @@ namespace Amusnet.ChickenEscape
                 title.text = "Paused";
                 result.text = $"{run.Saved}/{run.Total} rescued   ·   {run.Caught} caught";
                 retry.text = "Resume";
-                menu.text = "Back to menu";
+                menu.text = run.IsHosted ? "Return to village" : "Back to menu";
                 return;
             }
 
@@ -134,7 +134,7 @@ namespace Amusnet.ChickenEscape
             string tally = $"{run.Saved}/{run.Total} rescued   ·   {run.Caught} caught";
             result.text = ending.Length > 0 ? $"{tally}\n{ending}" : tally;
             retry.text = "Retry";
-            menu.text = "Close";
+            menu.text = run.IsHosted ? "Return to village" : "Close";
         }
 
         void ShowKeeper(bool shown)

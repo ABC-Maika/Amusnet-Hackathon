@@ -51,7 +51,7 @@ namespace Amusnet.ChickenEscape
             if (aboutToGrab)
             {
                 Vector3 center = keeper.StrikePoint;
-                center.y = .08f;
+                center.y = run.YardHeight + .08f;
                 strikeRenderer.transform.position = center;
                 SetTint(strikeRenderer, new Color(.91f, .16f, .08f, Mathf.Lerp(.32f, .65f, Mathf.PingPong(Time.time * 5f, 1f))));
             }

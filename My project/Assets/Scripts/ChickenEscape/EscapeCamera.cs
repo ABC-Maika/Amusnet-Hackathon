@@ -30,9 +30,11 @@ namespace Amusnet.ChickenEscape
             bool inYard = run.Current is MarketEscapeRun.Phase.Farm or MarketEscapeRun.Phase.Won or MarketEscapeRun.Phase.Lost;
             float target = inYard ? 1.13f : .92f;
             widen = Mathf.Lerp(widen, target, 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime));
-            Vector3 anchor = new(follow.x, Mathf.Clamp(follow.y * .44f, .05f, 1.9f), follow.z);
-            transform.position = anchor + size * widen;
-            transform.LookAt(anchor + Vector3.forward * .75f);
+            Vector3 local = run.ToYard(follow);
+            local.y = Mathf.Clamp(local.y * .44f, .05f, 1.9f);
+            Vector3 anchor = run.FromYard(local);
+            transform.position = anchor + run.YardVector(size * widen);
+            transform.LookAt(anchor + run.YardVector(Vector3.forward * .75f));
             output.fieldOfView = Mathf.Lerp(output.fieldOfView, run.IsButterfly ? 48f : 50f + run.DogSpeed * .45f,
                 1f - Mathf.Exp(-5f * Time.unscaledDeltaTime));
         }

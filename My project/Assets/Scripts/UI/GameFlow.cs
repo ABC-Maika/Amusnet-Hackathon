@@ -14,6 +14,7 @@ public class GameFlow : MonoBehaviour
     public static GameFlow Instance { get; private set; }
     public State Current { get; private set; }
     public event Action<State> StateChanged;
+    MonoBehaviour activityOwner;
 
     // Set by Restart so the reloaded scene skips the menu and drops straight into play.
     static bool skipMenu;
@@ -50,18 +51,34 @@ public class GameFlow : MonoBehaviour
     public bool WinPending { get; private set; }
 
     /// <summary>True only during live play: Playing and not in the win cinematic. Gameplay systems should tick only while this holds.</summary>
-    public bool IsRunning => Current == State.Playing && !WinPending;
+    public bool ActivityActive => activityOwner != null;
+    public bool IsRunning => Current == State.Playing && !WinPending && !ActivityActive;
+
+    public bool TryBeginActivity(MonoBehaviour owner)
+    {
+        if (!owner || !IsRunning) return false;
+        activityOwner = owner;
+        StateChanged?.Invoke(Current);
+        return true;
+    }
+
+    public void EndActivity(MonoBehaviour owner)
+    {
+        if (activityOwner != owner) return;
+        activityOwner = null;
+        StateChanged?.Invoke(Current);
+    }
 
     public void TogglePause()
     {
-        if (WinPending) return;
+        if (WinPending || ActivityActive) return;
         if (Current == State.Playing) SetState(State.Paused);
         else if (Current == State.Paused) SetState(State.Playing);
     }
 
     public void Win()
     {
-        if (Current != State.Playing || WinPending) return;
+        if (!IsRunning) return;
         if (WinCinematic == null) { SetState(State.Won); return; }
         WinPending = true;
         WinCinematic(() =>
@@ -71,7 +88,7 @@ public class GameFlow : MonoBehaviour
         });
     }
 
-    public void Lose() { if (Current == State.Playing && !WinPending) SetState(State.Lost); }
+    public void Lose() { if (IsRunning) SetState(State.Lost); }
 
     public void Restart()
     {

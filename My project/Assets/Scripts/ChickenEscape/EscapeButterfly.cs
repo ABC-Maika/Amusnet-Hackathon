@@ -35,14 +35,14 @@ namespace Amusnet.ChickenEscape
             wings.SetInteger(FlightPose, landing ? 2 : 0);
         }
 
-        public void Step(Vector2 input, float climb, bool controlled)
+        public void Step(Vector2 input, float climb, bool controlled, float yardHeight)
         {
-            float floor = .58f;
+            float floor = yardHeight + .58f;
             if (Physics.Raycast(transform.position + Vector3.up * .28f, Vector3.down, out var ground, 5f,
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                floor += ground.point.y;
+                floor = ground.point.y + .58f;
             float lift = controlled ? climb * 2.85f : Mathf.Clamp((floor - transform.position.y) * 5f, -2.8f, 2.4f);
-            float ceiling = 3.65f;
+            float ceiling = yardHeight + 3.65f;
             float height = Mathf.Clamp(transform.position.y + lift * Time.deltaTime, floor - .13f, Mathf.Max(floor, ceiling));
             Vector3 desired = new Vector3(input.x * 5.8f, 0f, input.y * 5.8f);
             motion = Vector3.MoveTowards(motion, desired, (controlled ? 25f : 15f) * Time.deltaTime);

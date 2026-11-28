@@ -32,9 +32,9 @@ namespace Amusnet.ChickenEscape
 
         void Awake() => motor = GetComponent<CharacterController>();
 
-        public void Tether()
+        public void Tether(Vector3 stakeOffset)
         {
-            var stake = transform.position + new Vector3(1.27f, 0f, -.64f);
+            var stake = transform.position + stakeOffset;
             TetherKnot = stake + Vector3.up * .38f;
             leash = new GameObject("Dog tether");
             leash.transform.SetParent(transform, true);

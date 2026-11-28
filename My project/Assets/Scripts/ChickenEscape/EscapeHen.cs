@@ -14,6 +14,7 @@ namespace Amusnet.ChickenEscape
         readonly Vector3[] corners = new Vector3[16];
         CharacterController motor;
         NavMeshPath path;
+        NavMeshQueryFilter navigation;
         Vector3 home, motion, scatterTo;
         float nextPathAt, calledAt, scatterUntil, vertical, idlePhase;
         int corner, cornerCount;
@@ -30,6 +31,11 @@ namespace Amusnet.ChickenEscape
             path = new NavMeshPath();
             home = transform.position;
             idlePhase = Mathf.Abs(home.x * .61f + home.z * .38f);
+        }
+
+        public void BindNavigation(int agentType)
+        {
+            navigation = new NavMeshQueryFilter { agentTypeID = agentType, areaMask = NavMesh.AllAreas };
         }
 
         public void Step(Vector3 target, EscapeHen[] flock, bool pathOpen, bool enterExit)
@@ -103,9 +109,9 @@ namespace Amusnet.ChickenEscape
             {
                 nextPathAt = Time.time + .18f + idlePhase % .1f;
                 corner = cornerCount = 0;
-                if (NavMesh.SamplePosition(transform.position, out var start, 1.15f, NavMesh.AllAreas) &&
-                    NavMesh.SamplePosition(target, out var end, 1.05f, NavMesh.AllAreas) &&
-                    NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path) &&
+                if (NavMesh.SamplePosition(transform.position, out var start, 1.15f, navigation) &&
+                    NavMesh.SamplePosition(target, out var end, 1.05f, navigation) &&
+                    NavMesh.CalculatePath(start.position, end.position, navigation, path) &&
                     path.status == NavMeshPathStatus.PathComplete)
                     cornerCount = path.GetCornersNonAlloc(corners);
             }

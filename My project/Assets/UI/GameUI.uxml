@@ -24,6 +24,7 @@
             <ui:Label name="messMultiplier" text="×1" class="mess-mult mess-mult--off" />
             <ui:Label name="coverStatus" text="" class="cover-status cover-status--off" />
             <ui:Label name="toast" text="" class="hud-toast hud-toast--off" />
+            <ui:Label name="activityPrompt" class="hud-toast hud-toast--off activity-prompt" picking-mode="Ignore" />
             <ui:Label text="Esc to pause" class="hud-hint" />
         </ui:VisualElement>
 

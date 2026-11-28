@@ -39,6 +39,7 @@ namespace Amusnet.ChickenEscape
         [SerializeField] Transform returnApproach, holdingPen;
 
         NavMeshAgent agent;
+        MarketEscapeRun yard;
         EscapeKeeperRig rig;
         EscapeHen quarry, inHands;
         EscapeDog heldDog, dogInReach;
@@ -59,6 +60,8 @@ namespace Amusnet.ChickenEscape
         public float DogPressure => Mathf.Clamp01(dogReachTime / DogWarningTime);
         public float DogRescueRemaining => heldDog ? Mathf.Max(0f, proceedsAt - Time.time) : 0f;
         public bool DogSecured => heldDog && Time.time >= proceedsAt;
+        public int AgentType => agent.agentTypeID;
+        NavMeshQueryFilter Navigation => new() { agentTypeID = AgentType, areaMask = agent.areaMask };
 
         void Awake()
         {
@@ -66,6 +69,8 @@ namespace Amusnet.ChickenEscape
             rig = new EscapeKeeperRig(animator, transform);
             firstPosition = transform.position;
         }
+
+        public void BindYard(MarketEscapeRun run) => yard = run;
 
         public bool HearBark(Vector3 point)
         {
@@ -80,7 +85,7 @@ namespace Amusnet.ChickenEscape
         {
             if (!started || IsHandlingHen ||
                 Current is PatrolState.Windup or PatrolState.Lunging or PatrolState.HoldingDog ||
-                !Within(point, 15f) || !NavMesh.SamplePosition(point, out var ground, 1.3f, agent.areaMask))
+                !Within(point, 15f) || !NavMesh.SamplePosition(point, out var ground, 1.3f, Navigation))
                 return false;
 
             decoyPoint = ground.position;
@@ -188,8 +193,8 @@ namespace Amusnet.ChickenEscape
             }
             else
             {
-                if (Within(Patrol[waypoint], .72f)) waypoint = (waypoint + 1) % Patrol.Length;
-                Go(PatrolState.Patrolling, Patrol[waypoint], 3.15f);
+                if (Within(yard.FromYard(Patrol[waypoint]), .72f)) waypoint = (waypoint + 1) % Patrol.Length;
+                Go(PatrolState.Patrolling, yard.FromYard(Patrol[waypoint]), 3.15f);
             }
             return null;
         }
@@ -227,7 +232,7 @@ namespace Amusnet.ChickenEscape
             float best = float.PositiveInfinity;
             foreach (var hen in flock)
             {
-                if (hen.Saved || hen.Caught || !hen.Following || MarketEscapeRun.InPen(hen.transform.position)) continue;
+                if (hen.Saved || hen.Caught || !hen.Following || yard.InPen(hen.transform.position)) continue;
                 float distance = (hen.transform.position - transform.position).sqrMagnitude;
                 if (distance >= best || !CanSee(hen.transform.position)) continue;
                 nearest = hen;
@@ -239,7 +244,7 @@ namespace Amusnet.ChickenEscape
         EscapeHen Lunge()
         {
             Go(PatrolState.Lunging, strikePoint, 8.25f, .10f);
-            if (quarry && !quarry.Caught && !quarry.Saved && !MarketEscapeRun.InPen(quarry.transform.position) &&
+            if (quarry && !quarry.Caught && !quarry.Saved && !yard.InPen(quarry.transform.position) &&
                 Within(quarry.transform.position, HenGrabDistance) && ClearTo(quarry.transform.position))
             {
                 henPositionOnGrab = quarry.transform.position;
@@ -273,9 +278,9 @@ namespace Amusnet.ChickenEscape
                 Go(PatrolState.CarryingHen, approach, 4.75f, .28f);
                 if (!Within(approach, .54f)) return;
 
-                Vector3 pen = holdingPen ? holdingPen.position : firstPosition + Vector3.forward;
+                Vector3 pen = holdingPen ? holdingPen.position : firstPosition + yard.YardVector(Vector3.forward);
                 int slot = pennedHens++;
-                dropPoint = pen + new Vector3((slot % 3 - 1) * .41f, 0f, slot / 3 * .32f);
+                dropPoint = pen + yard.YardVector(new Vector3((slot % 3 - 1) * .41f, 0f, slot / 3 * .32f));
                 Stop("Watch");
                 ChangeState(PatrolState.PuttingHenDown);
                 proceedsAt = Time.time + SetDownTime;
@@ -377,10 +382,11 @@ namespace Amusnet.ChickenEscape
         Vector3 Lead(Vector3 position, Vector3 velocity, float seconds)
         {
             Vector3 offset = Vector3.ClampMagnitude(Flat(velocity) * seconds, 2.65f);
-            if (offset.sqrMagnitude < .04f || !NavMesh.SamplePosition(position, out var start, .65f, agent.areaMask))
+            var filter = Navigation;
+            if (offset.sqrMagnitude < .04f || !NavMesh.SamplePosition(position, out var start, .65f, filter))
                 return position;
             Vector3 headStart = start.position + offset;
-            return NavMesh.Raycast(start.position, headStart, out var edge, agent.areaMask)
+            return NavMesh.Raycast(start.position, headStart, out var edge, filter)
                 ? edge.position : headStart;
         }
 
@@ -408,7 +414,7 @@ namespace Amusnet.ChickenEscape
             agent.stoppingDistance = stopDistance;
             if (Time.time >= nextPathAt)
             {
-                if (NavMesh.SamplePosition(target, out var ground, 1.25f, agent.areaMask))
+                if (NavMesh.SamplePosition(target, out var ground, 1.25f, Navigation))
                     agent.SetDestination(ground.position);
                 nextPathAt = Time.time + .16f;
             }

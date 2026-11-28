@@ -276,3 +276,7 @@
     opacity: 0;
     translate: -50% 12px;
 }
+
+.activity-prompt {
+    bottom: 96px;
+}
