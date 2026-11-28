@@ -14,6 +14,27 @@ public sealed class ButterflyCamera : CinemachineExtension
     private float orbitYaw;
     private float orbitTiltOffset;
     private bool capturedCursor;
+    private bool inputEnabled = true;
+
+    /// <summary>
+    /// When false the camera ignores the mouse and frees the cursor (e.g. on menus and pause);
+    /// setting it back to true captures the cursor again. Set by the game's GameplayGate.
+    /// </summary>
+    public bool InputEnabled
+    {
+        get => inputEnabled;
+        set
+        {
+            if (inputEnabled == value) return;
+            inputEnabled = value;
+            if (!Application.isPlaying || !isActiveAndEnabled) return;
+            if (value) CaptureCursor();
+            else ReleaseCursor();
+        }
+    }
+
+    /// <summary>Multiplier on mouse sensitivity (the player's setting).</summary>
+    public float SensitivityScale { get; set; } = 1f;
 
     protected override void Awake()
     {
@@ -25,7 +46,7 @@ public sealed class ButterflyCamera : CinemachineExtension
     protected override void OnEnable()
     {
         base.OnEnable();
-        if (Application.isPlaying)
+        if (Application.isPlaying && inputEnabled)
             CaptureCursor();
     }
 
@@ -38,7 +59,7 @@ public sealed class ButterflyCamera : CinemachineExtension
 
     private void Update()
     {
-        if (!Application.isPlaying || !Application.isFocused)
+        if (!Application.isPlaying || !Application.isFocused || !inputEnabled)
             return;
 
         var mouse = Mouse.current;
@@ -63,7 +84,7 @@ public sealed class ButterflyCamera : CinemachineExtension
 
     private void ApplyMouseDelta(Vector2 pixels)
     {
-        Vector2 delta = pixels * mouseSensitivity;
+        Vector2 delta = pixels * (mouseSensitivity * SensitivityScale);
         orbitYaw = Mathf.Repeat(orbitYaw + delta.x, 360f);
         orbitTiltOffset = Mathf.Clamp(downwardTilt + orbitTiltOffset - delta.y, 5f, 65f) - downwardTilt;
 

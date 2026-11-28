@@ -31,6 +31,8 @@ public class PredatorSystem : MonoBehaviour
     public float Percent { get; private set; }
     public bool IsHidden { get; private set; }
 
+    Amusnet.World.ShelterState shelter;
+
     float openTime;
     bool catching;
 
@@ -59,8 +61,9 @@ public class PredatorSystem : MonoBehaviour
         var flow = GameFlow.Instance;
         if (catching || !player || !flow || !flow.IsRunning) return;
 
-        // Swap this for the real hiding system (Amusnet.World.ShelterState.IsHidden on main) when it is merged in.
-        IsHidden = HidingZone.IsHidden(player.position);
+        // Hidden in a HidingZone, or inside one of emkata's HidingSpots (tracked by a ShelterState on the player).
+        if (shelter == null) shelter = player.GetComponentInParent<Amusnet.World.ShelterState>();
+        IsHidden = HidingZone.IsHidden(player.position) || (shelter != null && shelter.IsHidden);
 
         if (IsHidden)
         {

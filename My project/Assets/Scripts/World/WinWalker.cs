@@ -11,6 +11,19 @@ public class WinWalker : MonoBehaviour
     Transform body;
     Vector3 fullScale;
 
+    /// <summary>Height of the terrain under <paramref name="p"/>, or <paramref name="fallback"/> off any terrain.</summary>
+    public static float GroundY(Vector3 p, float fallback)
+    {
+        foreach (var terrain in Terrain.activeTerrains)
+        {
+            var origin = terrain.transform.position;
+            var size = terrain.terrainData.size;
+            if (p.x >= origin.x && p.x <= origin.x + size.x && p.z >= origin.z && p.z <= origin.z + size.z)
+                return origin.y + terrain.SampleHeight(p);
+        }
+        return fallback;
+    }
+
     /// <param name="body">Child that bobs and tilts; the root only moves along the ground.</param>
     public static void Add(GameObject go, Transform body, IEnumerable<Vector3> route, float delay, float speed, float bobHeight)
     {
@@ -35,6 +48,7 @@ public class WinWalker : MonoBehaviour
         float total = PathLength();
         travelled = Mathf.Min(total, travelled + speed * Time.unscaledDeltaTime);
         var (pos, dir) = Sample(travelled);
+        pos.y = GroundY(pos, pos.y);
         transform.position = pos;
         Face(dir);
 

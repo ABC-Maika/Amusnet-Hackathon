@@ -81,7 +81,8 @@ public class GameFlow : MonoBehaviour
 
     public void QuitToMenu() => ReloadScene();
 
-    static void ReloadScene() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    // Reload this scene, not the active one: the active scene is the additively loaded map (see MapLoader).
+    void ReloadScene() => SceneManager.LoadScene(gameObject.scene.buildIndex);
 
     void SetState(State next)
     {

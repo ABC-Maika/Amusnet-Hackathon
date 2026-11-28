@@ -21,8 +21,9 @@ public class WinSequence : MonoBehaviour
     [SerializeField] List<Transform> houses = new();
     [Tooltip("Where the villagers walk off to. Empty: four points past the edge of the village along ±X and ±Z.")]
     [SerializeField] List<Transform> exits = new();
-    [Tooltip("The square where trees sprout. Empty: the village's 'Fountain', else the village root.")]
+    [Tooltip("The square where trees sprout. Empty: the object named Square Name in any loaded scene, else the middle of the houses.")]
     [SerializeField] Transform square;
+    [SerializeField] string squareName = "Fountain";
 
     [Header("Look")]
     [Tooltip("URP Lit material that every piece is tinted from.")]
@@ -70,8 +71,8 @@ public class WinSequence : MonoBehaviour
         ResolveVillage();
         // Pieces are placed in world space under this root, which sits at the origin.
         var fx = new GameObject("Win Sequence FX").transform;
-        Vector3 center = square != null ? square.position : village != null ? village.position : Vector3.zero;
-        center.y = village != null ? village.position.y : 0f;
+        Vector3 center = square != null ? square.position : HousesMiddle();
+        center.y = WinWalker.GroundY(center, village != null ? village.position.y : 0f);
         var exitPoints = ExitPoints(center);
 
         float maxDist = 1f;
@@ -103,10 +104,33 @@ public class WinSequence : MonoBehaviour
         if (village == null) return;
         if (houses.Count == 0)
         {
+            // Placeholder village: a "Houses" group. Other maps: anything named "... house ..." under the root.
             var root = village.Find("Houses");
             if (root != null) foreach (Transform h in root) houses.Add(h);
+            else CollectHouses(village);
         }
-        if (square == null) square = village.Find("Fountain");
+        if (square == null)
+        {
+            var go = GameObject.Find(squareName);
+            if (go != null) square = go.transform;
+        }
+    }
+
+    void CollectHouses(Transform t)
+    {
+        foreach (Transform c in t)
+        {
+            if (c.name.IndexOf("house", StringComparison.OrdinalIgnoreCase) >= 0 && c.GetComponentInChildren<Renderer>() != null) houses.Add(c);
+            else CollectHouses(c);
+        }
+    }
+
+    Vector3 HousesMiddle()
+    {
+        if (houses.Count == 0) return village != null ? village.position : Vector3.zero;
+        var sum = Vector3.zero;
+        foreach (var h in houses) sum += h.position;
+        return sum / houses.Count;
     }
 
     List<Vector3> ExitPoints(Vector3 center)
@@ -129,7 +153,7 @@ public class WinSequence : MonoBehaviour
     {
         var door = house.Find("Door");
         Vector3 start = door != null ? door.position : house.position + Flat(center - house.position).normalized * 3f;
-        start.y = center.y;
+        start.y = WinWalker.GroundY(start, center.y);
         Vector3 exit = NearestExit(center, start, exitPoints);
         // Step out of the door, join the road that runs from the square to the exit, then follow it out.
         Vector3 onRoad = ClosestOnSegment(center, exit, start);
@@ -195,13 +219,13 @@ public class WinSequence : MonoBehaviour
     {
         var root = new GameObject($"Nature {house.name}").transform;
         root.SetParent(fx, false);
-        float ground = house.position.y;
+        float ground = WinWalker.GroundY(house.position, house.position.y);
 
         // Vines climbing the walls.
         for (int i = 0; i < 7; i++)
         {
             Vector3 p = PointOnSide(b, Random.Range(0, 4), Random.Range(0.1f, 0.9f), out Vector3 outward);
-            p.y = ground;
+            p.y = WinWalker.GroundY(p, ground);
             float height = b.size.y * Random.Range(0.45f, 0.8f);
             var vine = new GameObject("Vine").transform;
             vine.SetParent(root, false);
@@ -234,7 +258,7 @@ public class WinSequence : MonoBehaviour
         {
             Vector3 p = PointOnSide(b, Random.Range(0, 4), Random.Range(0f, 1f), out Vector3 outward);
             p += outward * Random.Range(0.3f, 1.6f);
-            p.y = ground;
+            p.y = WinWalker.GroundY(p, ground);
             float d = startDelay + 0.3f + Random.Range(0f, 1.5f);
             if (i % 2 == 0)
             {
@@ -262,7 +286,9 @@ public class WinSequence : MonoBehaviour
             float angle = (i + 0.5f) / count * Mathf.PI * 2f + 0.2f;
             var tree = new GameObject("Tree").transform;
             tree.SetParent(fx, false);
-            tree.position = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (radius + Random.Range(-0.6f, 0.8f));
+            var p = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (radius + Random.Range(-0.6f, 0.8f));
+            p.y = WinWalker.GroundY(p, center.y);
+            tree.position = p;
             tree.localScale = Vector3.one * Random.Range(0.9f, 1.3f);
             Piece(PrimitiveType.Cylinder, tree, new Vector3(0f, 1f, 0f), new Vector3(0.45f, 1f, 0.45f), Wood);
             Piece(PrimitiveType.Sphere, tree, new Vector3(0f, 2.6f, 0f), Vector3.one * 2.2f, Pick(Greens));
@@ -276,7 +302,8 @@ public class WinSequence : MonoBehaviour
     IEnumerator MoveCamera(Vector3 center)
     {
         var cam = Camera.main;
-        if (cam != null && cam.TryGetComponent(out MenuCamera follow)) follow.enabled = false;
+        // Take the camera over from Cinemachine for the shot.
+        if (cam != null && cam.TryGetComponent(out Unity.Cinemachine.CinemachineBrain brain)) brain.enabled = false;
 
         Vector3 fromPos = cam != null ? cam.transform.position : Vector3.zero;
         Quaternion fromRot = cam != null ? cam.transform.rotation : Quaternion.identity;
