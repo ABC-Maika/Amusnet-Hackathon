@@ -15,7 +15,7 @@ Use URP Lit or Simple Lit for world materials. Keep source art and gameplay asse
 
 ## Flight preview
 
-Open `Assets/Scenes/ButterflyPreview.unity` and enter Play mode. Hold **W** to climb or take off, **S** to dive, and **A/D** to turn. Arrow keys and the gamepad left stick also steer. Release the controls to descend automatically and stop on landing. The wings animate during flight. Hold **Space** to leave a pollen trail.
+Open `Assets/Scenes/ButterflyPreview.unity` and enter Play mode. Hold **W** to climb or take off, **S** to dive, and **A/D** to turn. Arrow keys and the gamepad left stick also steer. Release the controls to descend automatically and stop on landing. The wings animate during flight. Hold **Space** to leave a pollen trail. Hold **Left Shift** to boost and leave wind streaks from the outer wing edges that drift with the local wind.
 
 Move the mouse to orbit the camera. Press **Esc** to release the cursor and click the Game view to capture it again.
 

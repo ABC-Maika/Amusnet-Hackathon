@@ -16,5 +16,6 @@ MonoBehaviour:
   pitchSpeed: 95
   maximumPitch: 50
   neutralDescentPitch: 12
-  flightSpeed: 5
+  flightSpeed: 3.25
+  boostSpeed: 7
   acceleration: 16
