@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:b="ButterflyUI">
+    <ui:Style src="Common.uss" />
+    <ui:Style src="MainMenu.uss" />
+    <ui:VisualElement name="menuScreen" class="screen menu-screen hidden">
+        <ui:VisualElement class="reveal">
+            <b:ButterflyLogo name="logo" class="menu-logo float-loop"
+                upper-wing-color="#FF8A3D" lower-wing-color="#A78BFA" spot-color="#FFF4E0" body-color="#120F24" />
+        </ui:VisualElement>
+        <ui:Label text="Butterfly Rebellion" class="title menu-title reveal delay-1" />
+        <ui:Label text="ONE FLAP AT A TIME" class="subtitle reveal delay-2" />
+        <ui:VisualElement class="menu-buttons">
+            <ui:VisualElement class="reveal delay-3">
+                <ui:Button name="playButton" text="Play" class="btn btn--primary" />
+            </ui:VisualElement>
+            <ui:VisualElement class="reveal delay-4">
+                <ui:Button name="settingsButton" text="Settings" class="btn" />
+            </ui:VisualElement>
+            <ui:VisualElement class="reveal delay-5">
+                <ui:Button name="quitButton" text="Quit" class="btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

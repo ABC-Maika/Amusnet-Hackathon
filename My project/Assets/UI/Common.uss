@@ -1,0 +1,359 @@
+/* Twilight monarch palette: indigo glass panels, cream text, monarch orange, lilac, magenta */
+:root {
+    --c-white: #ffffff;
+    --c-text: #fff4e0;
+    --c-muted: #a99fd0;
+    --c-edge: #120f24;
+    --c-panel: rgba(28, 23, 54, 0.92);
+    --c-panel-edge: #3a3166;
+    --c-surface: #2c2650;
+    --c-surface-hi: #3a3270;
+    --c-track: rgba(255, 255, 255, 0.14);
+    --c-accent: #a78bfa;
+    --c-accent-hi: #c4b5fd;
+    --c-primary: #ff8a3d;
+    --c-primary-hi: #ffa463;
+    --c-primary-deep: #b9541a;
+    --c-on-primary: #1b1430;
+    --c-petal: #ff4f9a;
+    --c-petal-hi: #ff8cc4;
+    --c-gold: #ffc94a;
+    --c-danger: #ff5468;
+    --c-scrim: rgba(12, 9, 26, 0.62);
+
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-Regular.ttf");
+    color: var(--c-text);
+    font-size: 24px;
+}
+
+/* Without Unity's default theme the document root isn't stretched, so do it here. */
+.unity-ui-document__root {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+/* ---------- Text ---------- */
+
+.title {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    -unity-text-align: middle-center;
+    font-size: 72px;
+    color: var(--c-text);
+    -unity-text-outline-width: 0.2px;
+    -unity-text-outline-color: var(--c-edge);
+    text-shadow: 0 4px 14px rgba(12, 9, 26, 0.55);
+}
+
+.subtitle {
+    -unity-text-align: middle-center;
+    color: var(--c-text);
+    text-shadow: 0 2px 6px rgba(12, 9, 26, 0.6);
+    font-size: 22px;
+    letter-spacing: 4px;
+}
+
+.section-title {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    -unity-text-align: middle-center;
+    font-size: 44px;
+    color: var(--c-text);
+    margin-bottom: 24px;
+}
+
+/* ---------- Buttons ---------- */
+
+/* Chunky "pebble" buttons: a thick darker bottom edge gives depth;
+   hover lifts the button, press pushes it down onto that edge. */
+.btn {
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+    width: 360px;
+    height: 70px;
+    margin: 7px 0;
+    padding: 0;
+    font-size: 26px;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+    color: var(--c-text);
+    background-color: var(--c-surface);
+    border-width: 2px;
+    border-bottom-width: 6px;
+    border-color: var(--c-edge);
+    border-radius: 20px;
+    transition-property: translate, background-color, border-color, border-bottom-width, color;
+    transition-duration: 0.14s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.btn:hover {
+    background-color: var(--c-surface-hi);
+    border-color: var(--c-accent);
+    color: var(--c-white);
+    translate: 0 -3px;
+}
+
+.btn:focus {
+    border-color: var(--c-accent);
+}
+
+.btn:active {
+    translate: 0 4px;
+    border-bottom-width: 2px;
+    background-color: var(--c-surface);
+}
+
+.btn--primary {
+    background-color: var(--c-primary);
+    border-color: var(--c-primary-deep);
+    color: var(--c-on-primary);
+}
+
+.btn--primary:hover {
+    background-color: var(--c-primary-hi);
+    border-color: var(--c-primary-deep);
+    color: var(--c-on-primary);
+}
+
+.btn--primary:focus {
+    border-color: var(--c-white);
+}
+
+.btn--primary:active {
+    background-color: var(--c-primary);
+}
+
+/* ---------- Panels ---------- */
+
+.card {
+    align-items: center;
+    padding: 40px 56px;
+    background-color: var(--c-panel);
+    border-width: 2px;
+    border-bottom-width: 8px;
+    border-color: var(--c-panel-edge);
+    border-radius: 28px;
+}
+
+/* ---------- Screens: fade + zoom in, children slide in one after another ---------- */
+
+.screen {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    scale: 1.06 1.06;
+    transition-property: opacity, scale;
+    transition-duration: 0.35s, 0.35s;
+    transition-timing-function: ease-out-cubic, ease-out-back;
+}
+
+.screen--scrim {
+    background-color: var(--c-scrim);
+}
+
+.screen--open {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.hidden {
+    display: none;
+}
+
+.reveal {
+    opacity: 0;
+    translate: 0 40px;
+    transition-property: opacity, translate;
+    transition-duration: 0.45s, 0.45s;
+    transition-timing-function: ease-out-cubic, ease-out-back;
+}
+
+.screen--open .reveal {
+    opacity: 1;
+    translate: 0 0;
+}
+
+.delay-1 { transition-delay: 0.08s, 0.08s; }
+.delay-2 { transition-delay: 0.16s, 0.16s; }
+.delay-3 { transition-delay: 0.24s, 0.24s; }
+.delay-4 { transition-delay: 0.32s, 0.32s; }
+.delay-5 { transition-delay: 0.40s, 0.40s; }
+
+/* Ping-pong loops: UIAnim.Loop toggles the --b class every time the transition ends. */
+
+.float-loop {
+    translate: 0 -8px;
+    transition-property: translate;
+    transition-duration: 1.8s;
+    transition-timing-function: ease-in-out-sine;
+}
+
+.float-loop--b {
+    translate: 0 8px;
+}
+
+.pulse-loop {
+    scale: 1 1;
+    transition-property: scale;
+    transition-duration: 0.9s;
+    transition-timing-function: ease-in-out-sine;
+}
+
+.pulse-loop--b {
+    scale: 1.05 1.05;
+}
+
+/* Full-screen white "cloud" cover for scene changes: starts on, fades out once the scene is up. */
+.fade {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: var(--c-edge);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.45s;
+    transition-timing-function: ease-in-out-cubic;
+}
+
+.fade--on {
+    opacity: 1;
+}
+
+/* ---------- Settings ---------- */
+
+.settings {
+    width: 760px;
+}
+
+.setting-row {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    height: 64px;
+    padding: 0 8px;
+    border-radius: 14px;
+    transition-duration: 0.15s;
+}
+
+.setting-row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.setting-label {
+    width: 260px;
+    color: var(--c-text);
+}
+
+.setting-value {
+    width: 90px;
+    -unity-text-align: middle-right;
+    color: var(--c-accent-hi);
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-SemiBold.ttf");
+}
+
+.settings-back {
+    margin-top: 28px;
+}
+
+/* Slider (no default theme, so every part is styled here) */
+
+.slider {
+    flex-grow: 1;
+    height: 40px;
+    margin: 0 8px;
+}
+
+.slider > .unity-base-field__input {
+    flex-grow: 1;
+}
+
+.slider .unity-base-slider__drag-container {
+    flex-grow: 1;
+}
+
+.slider .unity-base-slider__tracker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 8px;
+    margin-top: -4px;
+    background-color: var(--c-track);
+    border-radius: 4px;
+}
+
+.slider .unity-base-slider__fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background-color: var(--c-accent);
+    border-radius: 4px;
+}
+
+.slider .unity-base-slider__dragger-border {
+    display: none;
+}
+
+.slider .unity-base-slider__dragger {
+    position: absolute;
+    top: 50%;
+    width: 26px;
+    height: 26px;
+    margin-top: -13px;
+    background-color: var(--c-text);
+    border-width: 4px;
+    border-color: var(--c-accent);
+    border-radius: 13px;
+    transition-property: scale;
+    transition-duration: 0.15s;
+}
+
+.slider:hover .unity-base-slider__dragger {
+    scale: 1.25 1.25;
+}
+
+/* Toggle drawn as a sliding switch */
+
+.switch {
+    flex-grow: 1;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0 8px;
+}
+
+.switch .unity-toggle__input {
+    width: 72px;
+    height: 38px;
+    padding: 4px;
+    background-color: var(--c-track);
+    border-radius: 19px;
+    transition-property: background-color;
+    transition-duration: 0.2s;
+}
+
+.switch .unity-toggle__checkmark {
+    width: 30px;
+    height: 30px;
+    background-color: var(--c-text);
+    border-radius: 15px;
+    transition-property: translate;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out-back;
+}
+
+.switch:checked .unity-toggle__input {
+    background-color: var(--c-accent);
+}
+
+.switch:checked .unity-toggle__checkmark {
+    translate: 34px 0;
+}
