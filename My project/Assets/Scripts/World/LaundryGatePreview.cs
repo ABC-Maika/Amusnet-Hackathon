@@ -38,6 +38,10 @@ namespace Amusnet.World
         public Transform EscapePoint => escapePoint;
         private float GateAngle => Mathf.SmoothStep(0f, 95f, gateTravel);
         private bool IsVillagerAtGate => (villager.position - gateApproach.position).sqrMagnitude < 0.9f * 0.9f;
+        public Vector3 VillagerPosition => villager.position;
+        public bool NeedsGoatBump => !VillagerBumped && !laundry.GoatEscaped;
+        public bool CanGoatApproach => NeedsGoatBump && IsVillagerAtGate &&
+            (phase is Phase.ToLaundry or Phase.HoldingGate);
 
         public bool IsNearSheetDrop(Vector3 goatPosition)
         {
@@ -98,6 +102,11 @@ namespace Amusnet.World
                 case Phase.ToLaundry:
                     if (!IsGateOpen)
                         break;
+                    if (CanGoatApproach)
+                    {
+                        phase = Phase.HoldingGate;
+                        break;
+                    }
                     if (laundry.IsInSheetChase && (laundry.HasGrabbedSheet || IsVillagerAtGate))
                     {
                         phase = Phase.HoldingGate;
@@ -111,7 +120,7 @@ namespace Amusnet.World
                     }
                     break;
                 case Phase.HoldingGate:
-                    if (!laundry.IsInSheetChase)
+                    if (!NeedsGoatBump && !laundry.IsInSheetChase)
                         phase = Phase.ToLaundry;
                     else
                         WalkTo(gateApproach.position, 2.6f);
