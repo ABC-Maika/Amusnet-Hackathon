@@ -1,0 +1,122 @@
+.escape-hud {
+    flex-grow: 1;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/Inter-Regular.ttf");
+    color: #fff4d9;
+}
+.objective-card {
+    position: absolute;
+    left: 2.8%;
+    top: 4%;
+    padding: 15px 24px 16px 24px;
+    background-color: rgba(38, 38, 29, 0.94);
+    border-left-width: 4px;
+    border-left-color: #efb767;
+    border-radius: 4px 16px 16px 4px;
+}
+.objective {
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/LibreBaskerville.ttf");
+    font-size: 31px;
+    margin: 0;
+    color: #fff4d9;
+}
+.progress-line { flex-direction: row; align-items: center; margin-top: 9px; }
+.counter { font-size: 20px; color: #f4cd8e; margin: 0 11px 0 0; }
+.pips { flex-direction: row; }
+.pips > VisualElement {
+    width: 12px;
+    height: 15px;
+    border-radius: 55% 55% 48% 48%;
+    background-color: #746653;
+    margin-right: 5px;
+    transition-property: background-color, scale;
+    transition-duration: 0.18s;
+}
+.pips > .saved { background-color: #ffd275; scale: 1.12 1.12; }
+.right-card {
+    position: absolute;
+    right: 2.8%;
+    top: 4%;
+    min-width: 132px;
+    align-items: center;
+    padding: 9px 14px;
+    border-radius: 14px;
+    background-color: rgba(38, 38, 29, 0.89);
+}
+.role { color: #ffe5ab; font-size: 17px; -unity-font-style: bold; margin: 0; }
+.clock { color: #fff4d9; font-size: 24px; margin: 4px 0 0 0; }
+.clock.urgent { color: #fba48b; }
+.prompt {
+    position: absolute;
+    bottom: 4%;
+    left: 50%;
+    translate: -50% 0;
+    width: 710px;
+    max-width: 87%;
+    padding: 9px 13px 8px;
+    border-radius: 16px;
+    background-color: rgba(38, 38, 29, 0.92);
+    align-items: center;
+}
+.prompt-line { flex-direction: row; align-items: center; justify-content: center; }
+.keycap {
+    background-color: #ffdb97;
+    color: #30291c;
+    -unity-font-style: bold;
+    font-size: 15px;
+    padding: 4px 8px;
+    margin: 0 9px 0 0;
+    border-radius: 5px;
+}
+.prompt-text { font-size: 22px; color: #fff4d9; white-space: normal; -unity-text-align: middle-center; }
+.controls { font-size: 16px; color: #dfcfb5; margin-top: 6px; white-space: normal; -unity-text-align: middle-center; }
+.marker {
+    position: absolute;
+    translate: -50% -50%;
+    padding: 4px 9px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-radius: 6px;
+    -unity-text-align: middle-center;
+    background-color: rgba(40, 35, 25, 0.90);
+}
+.marker.exit { color: #ffdf9c; }
+.marker.guide { color: #b8f5ff; }
+.outcome {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(21, 26, 22, 0.72);
+}
+.outcome-card {
+    width: 520px;
+    max-width: 86%;
+    padding: 33px 37px;
+    background-color: #f6edd8;
+    border-top-color: #e7af60;
+    border-top-width: 6px;
+    border-radius: 18px;
+    align-items: stretch;
+}
+.outcome-title {
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/LibreBaskerville.ttf");
+    font-size: 41px;
+    color: #342b21;
+    -unity-text-align: middle-center;
+}
+.outcome-detail {
+    font-size: 18px;
+    color: #6b5b45;
+    -unity-text-align: middle-center;
+    margin: 11px 0 21px 0;
+    white-space: normal;
+}
+.retry, .menu { height: 46px; font-size: 16px; border-radius: 11px; border-width: 0; color: #372b1c; }
+.retry { background-color: #efba70; -unity-font-style: bold; }
+.retry:hover { background-color: #ffd093; }
+.menu { margin-top: 8px; background-color: #e9dec3; }
+.menu:hover { background-color: #f4e8cd; }

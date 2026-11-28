@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="EscapeHud.uss" />
+    <ui:VisualElement class="escape-hud" picking-mode="Ignore">
+        <ui:VisualElement class="objective-card" picking-mode="Ignore">
+            <ui:Label text="Get the chickens out" class="objective" />
+            <ui:VisualElement class="progress-line" picking-mode="Ignore">
+                <ui:Label name="progress" text="0 / 6" class="counter" />
+                <ui:VisualElement name="pips" class="pips" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="right-card" picking-mode="Ignore">
+            <ui:Label name="role" text="Farm dog" class="role" />
+            <ui:Label name="clock" class="clock" />
+        </ui:VisualElement>
+        <ui:Label name="guide" class="marker guide" picking-mode="Ignore" />
+        <ui:Label name="orchard" text="Orchard gap" class="marker exit" picking-mode="Ignore" />
+        <ui:Label name="lane" text="Farm lane" class="marker exit" picking-mode="Ignore" />
+        <ui:VisualElement class="prompt" picking-mode="Ignore">
+            <ui:VisualElement class="prompt-line" picking-mode="Ignore">
+                <ui:Label name="prompt-key" class="keycap" />
+                <ui:Label name="prompt-text" class="prompt-text" />
+            </ui:VisualElement>
+            <ui:Label name="controls" class="controls" />
+        </ui:VisualElement>
+        <ui:VisualElement name="end" class="outcome">
+            <ui:VisualElement class="outcome-card">
+                <ui:Label name="end-title" class="outcome-title" />
+                <ui:Label name="end-subtitle" class="outcome-detail" />
+                <ui:Button name="retry" text="Play again" class="retry" />
+                <ui:Button name="menu" text="Back to workspace" class="menu" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
