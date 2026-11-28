@@ -10,6 +10,13 @@ namespace Amusnet.Mess
 
         private void OnTriggerEnter(Collider other) => TryInteractWith(other);
 
+        private void Update()
+        {
+            if (HasInteracted) return;
+            for (int i = 0; i < laundry.Length; i++)
+                laundry[i].localRotation = Quaternion.Euler(6f * Mathf.Sin(Time.time * 2.1f + i), 0f, 0f);
+        }
+
         protected override void OnInteracted(MessManager manager) => StartCoroutine(Fall(manager));
 
         private IEnumerator Fall(MessManager manager)

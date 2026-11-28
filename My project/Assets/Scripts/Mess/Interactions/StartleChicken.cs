@@ -11,6 +11,8 @@ namespace Amusnet.Mess
         [SerializeField] private Transform rightWing;
         [SerializeField] private Transform leftLeg;
         [SerializeField] private Transform rightLeg;
+        [SerializeField] private Animator animator;
+        [SerializeField] private Terrain terrain;
 
         private Vector3 perch;
         private Vector3 bodyRest;
@@ -34,7 +36,15 @@ namespace Amusnet.Mess
             float inward = Mathf.Clamp01((phase - 4.1f) / .9f);
             bool walking = outward is > 0f and < 1f || inward is > 0f and < 1f;
             Vector3 forward = restingRotation * Vector3.forward;
-            transform.position = perch + forward * (.55f * (outward - inward));
+            transform.position = Grounded(perch + forward * (.55f * (outward - inward)));
+            Quaternion idleHeading = phase >= 3.7f && phase < 5f
+                ? restingRotation * Quaternion.Euler(0f, 180f, 0f) : restingRotation;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, idleHeading, 350f * Time.deltaTime);
+            if (animator)
+            {
+                animator.SetFloat("Speed", walking ? 1f : 0f, .1f, Time.deltaTime);
+                return;
+            }
             float stride = walking ? Mathf.Sin(phase * 22f) : 0f;
             float peck = walking ? 0f : Mathf.Pow(Mathf.Max(0f, Mathf.Sin(phase * 5.8f)), 5f);
             body.localPosition = bodyRest + Vector3.up * (.035f * Mathf.Abs(stride) - .06f * peck);
@@ -71,6 +81,7 @@ namespace Amusnet.Mess
 
             transform.rotation = running;
             body.localRotation = Quaternion.identity;
+            if (animator) animator.SetFloat("Speed", 2f);
             float impactDistance = Mathf.Max(0f, toPot.magnitude - 0.40f);
             float runDistance = impactDistance + 1.9f;
             float duration = Mathf.Max(0.6f, runDistance / 3.2f);
@@ -81,7 +92,7 @@ namespace Amusnet.Mess
                 float distance = runDistance * Mathf.SmoothStep(0f, 1f, progress);
                 float stride = Mathf.Sin(elapsed * 37f);
                 float hop = Mathf.Abs(stride) * Mathf.Sin(Mathf.PI * progress);
-                transform.position = origin + direction * distance;
+                transform.position = Grounded(origin + direction * distance);
                 body.localPosition = bodyRest + Vector3.up * (hop * 0.12f);
                 leftLeg.localRotation = Quaternion.Euler(stride * 32f, 0f, 0f);
                 rightLeg.localRotation = Quaternion.Euler(-stride * 32f, 0f, 0f);
@@ -96,11 +107,19 @@ namespace Amusnet.Mess
                 yield return null;
             }
 
-            transform.position = origin + direction * runDistance;
+            transform.position = Grounded(origin + direction * runDistance);
             body.localPosition = bodyRest;
             leftLeg.localRotation = rightLeg.localRotation = Quaternion.identity;
             leftWing.localRotation = rightWing.localRotation = Quaternion.identity;
+            if (animator) animator.SetFloat("Speed", 0f);
             if (!reachedPot && pot) pot.TryInteract(manager);
+        }
+
+        private Vector3 Grounded(Vector3 position)
+        {
+            if (terrain)
+                position.y = terrain.transform.position.y + terrain.SampleHeight(position) + .04f;
+            return position;
         }
     }
 }

@@ -163,7 +163,8 @@ namespace Amusnet.NPC
         {
             float speed = agent.velocity.magnitude;
             float stride = Mathf.Sin(Time.time * 5.5f);
-            animator.speed = speed > .12f ? Mathf.Clamp(speed / 1.65f, .55f, 2f) : 0f;
+            float playback = speed > .12f ? Mathf.Clamp(speed / 1.65f, .45f, 2.1f) : 0f;
+            animator.speed = Mathf.MoveTowards(animator.speed, playback, 5f * Time.deltaTime);
             float tilt = CurrentActivity == Activity.Working ? 7f + stride * 6f
                 : CurrentActivity == Activity.Complaining ? -6f + stride * 5f : 0f;
             animator.transform.localRotation = Quaternion.Slerp(animator.transform.localRotation,

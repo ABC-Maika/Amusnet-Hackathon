@@ -12,6 +12,7 @@ namespace Amusnet.Animals
         [SerializeField] private Transform head;
         [SerializeField] private Transform tail;
         [SerializeField] private Transform[] legs;
+        [SerializeField] private Animator animator;
         [SerializeField] private Vector3 strollSpot;
         [SerializeField] private float walkSpeed = 1.2f;
         [SerializeField] private float panicSpeed = 3.8f;
@@ -85,6 +86,12 @@ namespace Amusnet.Animals
             gait += Time.deltaTime * (4f + speed * 5f);
             float stride = Mathf.Sin(gait);
             float walking = Mathf.Clamp01(speed / Mathf.Max(.1f, walkSpeed));
+            if (animator)
+            {
+                float blend = IsAlarmed ? Mathf.Lerp(walking, 2f, Mathf.Clamp01(speed / panicSpeed)) : walking;
+                animator.SetFloat("Speed", blend, .12f, Time.deltaTime);
+                return;
+            }
             float swing = walking * (IsAlarmed ? 36f : 24f);
             for (int i = 0; i < legs.Length; i++)
                 legs[i].localRotation = Quaternion.Euler(stride * swing * (i is 0 or 3 ? 1f : -1f), 0f, 0f);
